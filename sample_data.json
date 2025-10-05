@@ -1,0 +1,11 @@
+{
+  "recipeNum": "0001",
+  "discription": "תשלום שכירות חודש יוני 25",
+  "invoice_no": "1234",
+  "customer": "גזוז בתי קפה בראשון",
+  "payment": "2001",
+  "mamVal": "18%",
+  "bankAccount": "123456",
+  "BankNumber": "12",
+  "CheckNumber": "56789"
+}

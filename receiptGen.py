@@ -6,6 +6,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import getFont
 from bidi.algorithm import get_display
+import json
 
 hebrew_text = "שלום עולם"
 
@@ -14,13 +15,10 @@ hebrew_text = "שלום עולם"
 pdfmetrics.registerFont(TTFont("Alef", "Alef-Regular.ttf"))
 pdfmetrics.registerFont(TTFont("Alef-Bold", "Alef-Bold.ttf"))
 
-TEMPLATE_SVG = "recipt_template_TP.svg"
+TEMPLATE_SVG = "receipt_template_TP.svg"
 OUTPUT_PDF = r"c:/tmp/receipt.pdf"
+HoniSig = "HoniSigneture.jpg"
 PAGE_W, PAGE_H = 125 * mm, 160 * mm
-
-
-from reportlab.pdfbase.pdfmetrics import getFont
-from reportlab.lib.units import mm
 
 def inkScapeToReplib(
     x_mm: float,
@@ -30,7 +28,7 @@ def inkScapeToReplib(
     page_h_mm: float,
     font_name: str,
     font_size_pt: float
-) -> (float, float):
+) -> tuple[float, float]:
     """
     Convert Inkscape coords to ReportLab points for drawRightString.
 
@@ -48,7 +46,7 @@ def inkScapeToReplib(
     font_height = font_size_pt/mm
     y = page_h_mm-y_mm - font_height/2
     x = x_mm + box_w_mm
-    print(x,y)
+    # print(x,y)
     # 1) Right-edge X in points
     # Inkscape X is the left side of the box; for right-align we move to left+width
     x_pt = (x_mm + box_w_mm) * mm
@@ -60,34 +58,73 @@ def inkScapeToReplib(
     font = getFont(font_name)
     asc  = font.face.ascent  / 1000.0 * font_size_pt   # ascent in points
     desc = font.face.descent / 1000.0 * font_size_pt   # descent in points (usually negative)
-    print('font acc ', asc-desc/mm ,font_height)
+    # print('font acc ', asc-desc/mm ,font_height)
     y = y-box_h_mm/2
     
     return x, y
 
-def create_receipt(data):
-    c = canvas.Canvas(OUTPUT_PDF, pagesize=(PAGE_W, PAGE_H))
+def inkscapToDraw(x_mm, y_mm, w_mm, h_mm, page_h_mm):
+  """
+  Convert Inkscape (SVG) coordinates to ReportLab drawImage parameters.
+
+  Args:
+    x_mm (float): X position (mm, top-left in Inkscape)
+    y_mm (float): Y position (mm, top-left in Inkscape)
+    w_mm (float): Width (mm)
+    h_mm (float): Height (mm)
+    page_h_mm (float): Page height (mm)
+
+  Returns:
+    (x_pt, y_pt, w_pt, h_pt): Position and size in points for drawImage
+  """
+  x_pt = x_mm * mm
+  y_pt = (page_h_mm - y_mm - h_mm) * mm
+  w_pt = w_mm * mm
+  h_pt = h_mm * mm
+  return x_pt, y_pt, w_pt, h_pt
+
+def create_receipt(data, saveNmae):
+    c = canvas.Canvas(saveNmae, pagesize=(PAGE_W, PAGE_H))
     PH = 161
     # Load and draw the SVG template
     drawing = svg2rlg(TEMPLATE_SVG)
     drawing.width, drawing.height = PAGE_W, PAGE_H  # Ensure correct scaling
     renderPDF.draw(drawing, c, 0, 0)
-
     # Overlay dynamic fields (like invoice number, amounts)
-    c.setFont("Helvetica", 12)
-    x, y = inkScapeToReplib(11, 5*9+55.75, 13, 3.5, PH, "Helvetica", 12)
-    c.drawRightString(x*mm, y*mm, data["invoice_no"])
+    c.setFont("Helvetica", 10)
+    x, y = inkScapeToReplib(60, 26, 15, 5, PH, "Helvetica", 10)
+    c.drawRightString(x*mm, y*mm, data["recipeNum"])
+    x, y = inkScapeToReplib(11, 5*9+55.75, 13, 3.5, PH, "Helvetica", 10)
+    c.drawRightString(x*mm, y*mm, data["payment"])
+    x, y = inkScapeToReplib(11, 5*8+55.75, 13, 3.5, PH, "Helvetica", 10)
+    c.drawRightString(x*mm, y*mm, data["mamVal"])
     rtl_text = get_display(data["customer"])  # Corrects Hebrew order
     c.setFont("Alef", 12)
+    x, y = inkScapeToReplib(32, 55.75, 80, 3.5, PH, "Alef", 12)
+    rtl_text = get_display(data["discription"])  # Corrects Hebrew order
+    c.drawRightString(x*mm, y*mm, rtl_text)
     x, y = inkScapeToReplib(45, 36, 60, 3.5, PH, "Alef", 12)
     c.drawRightString(x*mm, y*mm, rtl_text)
-    c.setFont("Alef", 16)
-    x, y = inkScapeToReplib(11, 115, 104, 10, PH, "Alef", 16)
-    c.drawRightString(x*mm, y*mm, '6789'+' סכום '[::-1]+'123456'+' חשבון '[::-1]+' 12 '+'בנק'[::-1]+' 45321 '+'צק מס'[::-1])
+    c.setFont("Alef", 10)
+    x, y = inkScapeToReplib(11, 115, 104, 10, PH, "Alef", 10)
+    c.drawRightString(x*mm, y*mm, 
+                      data['payment']+' סכום '[::-1]+data['bankAccount']+' חשבון '[::-1]+data['BankNumber']+' בנק ' [::-1]+data['CheckNumber']+' צק מס '[::-1])
+    x, y = inkScapeToReplib(80, 130, 24, 6, PH, "Alef", 10)
+    c.drawRightString(x*mm, y*mm, f"{data['Date']}")
+    x,y,w,h = inkscapToDraw(11, 131, 24, 6, PH)
+    # print(f'sig pos {x} {y} {w} {h}')
+    c.drawImage(HoniSig, x, y, w, h)
     c.showPage()
     c.save()
-    print("Saved:", OUTPUT_PDF)
+    print("Saved:", saveNmae)
 
-# Example data
-sample_data = {"invoice_no": "1234", "customer": "גזוז בתי קפה בראשון"}
-create_receipt(sample_data)
+def read_customer_data(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data
+
+if __name__ == "__main__":
+  # Example data
+  cData = read_customer_data("customers_data.json")
+  sample_data = cData["Gazoz"]
+  create_receipt(sample_data, sample_data["SaveName"])
