@@ -11,6 +11,7 @@ from to_excel import ToExcelApp
 def main():
 	root = tk.Tk()
 	root.title("Receipt Tools")
+	root.iconbitmap('receiptCreat.ico')
 	root.geometry('1000x700')
 
 	notebook = ttk.Notebook(root)
