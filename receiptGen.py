@@ -107,11 +107,32 @@ def create_receipt(data, saveNmae):
     c.drawRightString(x*mm, y*mm, rtl_text)
     c.setFont("Alef", 10)
     x, y = inkScapeToReplib(11, 115, 104, 10, PH, "Alef", 10)
-    c.drawRightString(x*mm, y*mm, 
-                      data['payment']+' סכום '[::-1]+data['bankAccount']+' חשבון '[::-1]+data['BankNumber']+' בנק ' [::-1]+data['CheckNumber']+' צק מס '[::-1])
+    # Compose optional bank/transfer line. If 'bank_transfer' is present use it directly,
+    # otherwise build the line from available fields. If nothing is present, skip drawing.
+    bank_text = ''
+    if data.get('bank_transfer_referance'):
+        bank_text = data.get('bank_transfer_referance')
+        transfer_account = data.get('transfer_bankAccount')
+        c.drawRightString(x*mm, y*mm,  transfer_account + ' :מחשבון '[::-1] + bank_text + '  העברה בנקאית אסמכתא: '[::-1])
+    else:
+        parts = []
+        # Keep the original visual order but only include existing fields
+        if data.get('payment'):
+            parts.append(data.get('payment') + ' סכום: '[::-1])
+        # Hebrew labels reversed in source: keep original style
+        if data.get('bankAccount'):
+            parts.append(data.get('bankAccount') + ' חשבון: '[::-1])
+        if data.get('BankNumber'):
+            parts.append( data.get('BankNumber') + ' בנק: '[::-1])
+        if data.get('CheckNumber'):
+            parts.append(data.get('CheckNumber')+" מס צ'ק: "[::-1])
+        # join without extra separators to match previous formatting
+        bank_text = ''.join(parts)
+        
+
     x, y = inkScapeToReplib(80, 130, 24, 6, PH, "Alef", 10)
-    c.drawRightString(x*mm, y*mm, f"{data['Date']}")
-    x,y,w,h = inkscapToDraw(11, 131, 24, 6, PH)
+    c.drawRightString(x*mm, y*mm, f"{data.get('Date', '')}")
+    x, y, w, h = inkscapToDraw(11, 131, 24, 6, PH)
     # print(f'sig pos {x} {y} {w} {h}')
     c.drawImage(HoniSig, x, y, w, h)
     c.showPage()
@@ -125,6 +146,8 @@ def read_customer_data(file_path):
 
 if __name__ == "__main__":
   # Example data
-  cData = read_customer_data("customers_data.json")
-  sample_data = cData["Gazoz"]
-  create_receipt(sample_data, sample_data["SaveName"])
+  cData = read_customer_data(r"G:\My Drive\Rentals\RentalsDB\customers_data.json")
+  sample_data = cData["Dalya"]
+  sample_data['bank_transfer_referance'] = '1234567890'
+  sample_data['transfer_bankAccount'] = '012909912'
+  create_receipt(sample_data, 'c:/tmp/receipt.pdf')

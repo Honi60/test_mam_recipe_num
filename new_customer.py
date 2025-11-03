@@ -16,7 +16,9 @@ SAMPLE_KEYS = [
     "BankNumber",
     "CheckNumber",
     "Date",
-    "SaveFolder"
+    "SaveFolder",
+    "bank_transfer_referance",
+    "transfer_bankAccount"
 ]
 
 
@@ -48,6 +50,14 @@ class CustomerEditor(tk.Frame):
             pass
 
     def save_customers(self):
+        # Prevent saving if no customer is selected and fields are filled
+        sel = self.listbox.curselection()
+        if self.current is None:
+            # Check if any field is filled
+            filled = any(ent.get().strip() for ent in self.fields.values())
+            if filled:
+                messagebox.showwarning("No customer selected", "Please select or add a customer before saving. Data in the fields will not be saved.")
+                return
         try:
             self.backup_customers()
             with open(CUSTOMERS_FILE, "w", encoding="utf-8") as f:
@@ -74,6 +84,12 @@ class CustomerEditor(tk.Frame):
 
         # Form fields on the right
         self.fields = {}
+        def warn_if_no_customer(event):
+            if self.current is None:
+                messagebox.showwarning("No customer selected", "Please select or add a customer before editing data.")
+                return "break"
+
+        import tkinter.filedialog
         for key in SAMPLE_KEYS:
             row = tk.Frame(right)
             row.pack(fill="x", pady=2)
@@ -81,7 +97,17 @@ class CustomerEditor(tk.Frame):
             lbl.pack(side="left")
             ent = tk.Entry(row)
             ent.pack(side="left", fill="x", expand=True)
+            ent.bind("<KeyPress>", warn_if_no_customer)
+            ent.bind("<Control-v>", warn_if_no_customer)
             self.fields[key] = ent
+            if key == "SaveFolder":
+                def browse_folder(e=None, entry=ent):
+                    folder = tkinter.filedialog.askdirectory(title="Select Save Folder")
+                    if folder:
+                        entry.delete(0, tk.END)
+                        entry.insert(0, folder)
+                browse_btn = tk.Button(row, text="Browse", command=browse_folder)
+                browse_btn.pack(side="left", padx=4)
 
         action_frame = tk.Frame(right)
         action_frame.pack(fill="x", pady=6)
