@@ -110,7 +110,7 @@ def create_receipt(data, saveNmae):
     # Compose optional bank/transfer line. If 'bank_transfer' is present use it directly,
     # otherwise build the line from available fields. If nothing is present, skip drawing.
     bank_text = ''
-    if data.get('bank_transfer_referance'):
+    if data.get('bank_transfer_referance') is not None and data.get('bank_transfer_referance') != '':
         bank_text = data.get('bank_transfer_referance')
         transfer_account = data.get('transfer_bankAccount')
         c.drawRightString(x*mm, y*mm,  transfer_account + ' :מחשבון '[::-1] + bank_text + '  העברה בנקאית אסמכתא: '[::-1])
@@ -128,6 +128,7 @@ def create_receipt(data, saveNmae):
             parts.append(data.get('CheckNumber')+" מס צ'ק: "[::-1])
         # join without extra separators to match previous formatting
         bank_text = ''.join(parts)
+        c.drawRightString(x*mm, y*mm, bank_text)
         
 
     x, y = inkScapeToReplib(80, 130, 24, 6, PH, "Alef", 10)
