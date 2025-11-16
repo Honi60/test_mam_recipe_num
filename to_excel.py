@@ -3,7 +3,7 @@ import json
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-DB_DIR = r"G:\My Drive\Rentals\RentalsDB"
+DB_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB"
 HISTORY_FILE = os.path.join(DB_DIR, "history.json")
 
 

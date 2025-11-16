@@ -3,7 +3,7 @@ import json
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 
-DB_DIR = r"G:\My Drive\Rentals\RentalsDB"
+DB_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB"
 CUSTOMERS_FILE = os.path.join(DB_DIR, "customers_data.json")
 SAMPLE_KEYS = [
     "recipeNum",

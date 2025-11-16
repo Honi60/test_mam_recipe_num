@@ -147,7 +147,7 @@ def read_customer_data(file_path):
 
 if __name__ == "__main__":
   # Example data
-  cData = read_customer_data(r"G:\My Drive\Rentals\RentalsDB\customers_data.json")
+  cData = read_customer_data(r"E:\MyGoogleDrive\Rentals\RentalsDB\customers_data.json")
   sample_data = cData["Dalya"]
   sample_data['bank_transfer_referance'] = '1234567890'
   sample_data['transfer_bankAccount'] = '012909912'
