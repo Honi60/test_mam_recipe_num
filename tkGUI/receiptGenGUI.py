@@ -2,7 +2,7 @@ import os
 import json
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from receiptGen import create_receipt
+from logic.receiptGen import create_receipt
 from bidi.algorithm import get_display
 
 class ReceiptGenGUI:

@@ -1,3 +1,4 @@
+import os
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPDF
 from reportlab.pdfgen import canvas
@@ -5,6 +6,7 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import getFont
+from config.paths import FONT_ALEF_REGULAR, FONT_ALEF_BOLD, RECEIPT_TEMPLATE_TP, HONI_SIGNATURE
 from bidi.algorithm import get_display
 import json
 
@@ -12,12 +14,41 @@ hebrew_text = "שלום עולם"
 
 
 
-pdfmetrics.registerFont(TTFont("Alef", "Alef-Regular.ttf"))
-pdfmetrics.registerFont(TTFont("Alef-Bold", "Alef-Bold.ttf"))
+try:
+  if FONT_ALEF_REGULAR and os.path.exists(FONT_ALEF_REGULAR):
+    pdfmetrics.registerFont(TTFont("Alef", FONT_ALEF_REGULAR))
+  else:
+    raise FileNotFoundError(f"Font not found: {FONT_ALEF_REGULAR}")
+  if FONT_ALEF_BOLD and os.path.exists(FONT_ALEF_BOLD):
+    pdfmetrics.registerFont(TTFont("Alef-Bold", FONT_ALEF_BOLD))
+  else:
+    raise FileNotFoundError(f"Font not found: {FONT_ALEF_BOLD}")
+except Exception:
+  # If font registration fails, fallback gracefully.
+  pass
 
-TEMPLATE_SVG = "receipt_template_TP.svg"
+# Choose a font name that exists in the pdfmetrics registry; default to Helvetica
+def _select_font(preferred="Alef"):
+    try:
+        getFont(preferred)
+        return preferred
+    except Exception:
+        # Pick a known-safe PDF core font
+        for alt in ("Helvetica", "Times-Roman", "Courier"):
+            try:
+                getFont(alt)
+                return alt
+            except Exception:
+                continue
+    # Last resort
+    return "Helvetica"
+
+HEBREW_FONT = _select_font("Alef")
+
+# Template and image resources from config
+TEMPLATE_SVG = RECEIPT_TEMPLATE_TP
 OUTPUT_PDF = r"c:/tmp/receipt.pdf"
-HoniSig = "HoniSigneture.jpg"
+HoniSig = HONI_SIGNATURE
 PAGE_W, PAGE_H = 125 * mm, 160 * mm
 
 def inkScapeToReplib(
@@ -55,9 +86,14 @@ def inkScapeToReplib(
     y_base_pt = (page_h_mm - y_mm) * mm
 
     # 3) Get font metrics (ascent/descent), in font units (1000 = em)
-    font = getFont(font_name)
-    asc  = font.face.ascent  / 1000.0 * font_size_pt   # ascent in points
-    desc = font.face.descent / 1000.0 * font_size_pt   # descent in points (usually negative)
+    try:
+      font = getFont(font_name)
+      asc  = font.face.ascent  / 1000.0 * font_size_pt   # ascent in points
+      desc = font.face.descent / 1000.0 * font_size_pt   # descent in points (usually negative)
+    except Exception:
+      # If we can't retrieve metrics for this font, approximate to avoid crashing
+      asc = font_size_pt * 0.8
+      desc = font_size_pt * -0.2
     # print('font acc ', asc-desc/mm ,font_height)
     y = y-box_h_mm/2
     
@@ -99,14 +135,15 @@ def create_receipt(data, saveNmae):
     x, y = inkScapeToReplib(11, 5*8+55.75, 13, 3.5, PH, "Helvetica", 10)
     c.drawRightString(x*mm, y*mm, data["mamVal"])
     rtl_text = get_display(data["customer"])  # Corrects Hebrew order
-    c.setFont("Alef", 12)
-    x, y = inkScapeToReplib(32, 55.75, 80, 3.5, PH, "Alef", 12)
+    # Use the selected Hebrew font (falls back to a safe default if Alef is unavailable)
+    c.setFont(HEBREW_FONT, 12)
+    x, y = inkScapeToReplib(32, 55.75, 80, 3.5, PH, HEBREW_FONT, 12)
     rtl_text = get_display(data["discription"])  # Corrects Hebrew order
     c.drawRightString(x*mm, y*mm, rtl_text)
-    x, y = inkScapeToReplib(45, 36, 60, 3.5, PH, "Alef", 12)
+    x, y = inkScapeToReplib(45, 36, 60, 3.5, PH, HEBREW_FONT, 12)
     c.drawRightString(x*mm, y*mm, rtl_text)
-    c.setFont("Alef", 10)
-    x, y = inkScapeToReplib(11, 115, 104, 10, PH, "Alef", 10)
+    c.setFont(HEBREW_FONT, 10)
+    x, y = inkScapeToReplib(11, 115, 104, 10, PH, HEBREW_FONT, 10)
     # Compose optional bank/transfer line. If 'bank_transfer' is present use it directly,
     # otherwise build the line from available fields. If nothing is present, skip drawing.
     bank_text = ''
@@ -131,7 +168,7 @@ def create_receipt(data, saveNmae):
         c.drawRightString(x*mm, y*mm, bank_text)
         
 
-    x, y = inkScapeToReplib(80, 130, 24, 6, PH, "Alef", 10)
+    x, y = inkScapeToReplib(80, 130, 24, 6, PH, HEBREW_FONT, 10)
     c.drawRightString(x*mm, y*mm, f"{data.get('Date', '')}")
     x, y, w, h = inkscapToDraw(11, 131, 24, 6, PH)
     # print(f'sig pos {x} {y} {w} {h}')

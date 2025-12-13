@@ -2,7 +2,7 @@ import os
 import json
 import tkinter as tk
 from tkinter import messagebox, filedialog
-from receiptGen import create_receipt
+from logic.receiptGen import create_receipt
 
 DB_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB"
 HISTORY_FILE = os.path.join(DB_DIR, "history.json")

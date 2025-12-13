@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
 import sys
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
-from receiptGen import create_receipt
+from logic.receiptGen import create_receipt
 
 DB_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB"
 HISTORY_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB\History"
