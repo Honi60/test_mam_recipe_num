@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import re
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, 
@@ -7,9 +8,12 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QLi
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from bidi.algorithm import get_display
+# Add parent directory to path for imports when running standalone
+if __name__ == '__main__':
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.paths import DB_DIR, RECIEPT_ROOT
 
-DB_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB"
-CUSTOMERS_FILE = os.path.join(DB_DIR, "customers_data.json")
+CUSTOMERS_FILE = os.path.join(DB_DIR,"customers_data.json")
 
 SAMPLE_KEYS = [
     "recipeNum", "discription", "invoice_no", "customer", "payment", "mamVal",
@@ -55,7 +59,9 @@ class CustomerEditor_Qt(QWidget):
             if os.path.exists(CUSTOMERS_FILE):
                 import shutil, datetime
                 ts = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
-                shutil.copy2(CUSTOMERS_FILE, f"{CUSTOMERS_FILE}.bak.{ts}")
+                backup_folder = "costomers_backUp"
+                CUSTOMERS_FILE_BAK = os.path.join(DB_DIR, backup_folder, "customers_data.json")
+                shutil.copy2(CUSTOMERS_FILE, f"{CUSTOMERS_FILE_BAK}.bak.{ts}")
         except Exception:
             pass
     
@@ -146,7 +152,7 @@ class CustomerEditor_Qt(QWidget):
         self.refresh_list()
     
     def browse_folder(self, entry):
-        folder = QFileDialog.getExistingDirectory(self, "Select Save Folder")
+        folder = QFileDialog.getExistingDirectory(self, "Select Save Folder", RECIEPT_ROOT)
         if folder:
             entry.setText(folder)
     
@@ -221,6 +227,7 @@ class CustomerEditor_Qt(QWidget):
                 QMessageBox.warning(self, "Error", "Select a customer before saving")
                 return
         try:
+            self.update_customer()
             self.backup_customers()
             with open(CUSTOMERS_FILE, "w", encoding="utf-8") as f:
                 json.dump(self.customers, f, ensure_ascii=False, indent=2)
@@ -259,3 +266,12 @@ class CustomerEditor_Qt(QWidget):
         combined = wrap_numbers_with_rlm(combined)
         vis = get_display(combined)
         self.preview_label.setText(vis)
+
+if __name__ == '__main__':
+    from PyQt5.QtWidgets import QApplication
+    app = QApplication(sys.argv)
+    w = CustomerEditor_Qt()
+    w.setWindowTitle('Customer Editor - Standalone Test')
+    w.resize(800, 600)
+    w.show()
+    sys.exit(app.exec_())

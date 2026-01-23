@@ -1,10 +1,16 @@
 import os
 import json
+import sys
 import tkinter as tk
 from tkinter import messagebox, filedialog
+
+# Add parent directory to path for imports when running standalone
+if __name__ == '__main__':
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from logic.receiptGen import create_receipt
 
-DB_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB"
+DB_DIR = r"G:\My Drive\Rentals\RentalsDB"
 HISTORY_FILE = os.path.join(DB_DIR, "history.json")
 
 

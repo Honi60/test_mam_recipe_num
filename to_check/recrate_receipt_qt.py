@@ -6,21 +6,43 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
 import sys
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
+from receiptGen import create_receipt
 
-# Add parent directory to path for imports when running standalone
-if __name__ == '__main__':
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from logic.receiptGen import create_receipt
-from config.paths import DB_DIR
-
-HISTORY_DIR = os.path.join(DB_DIR, "History")
+DB_DIR = r"G:\My Drive\Rentals\RentalsDB"
+HISTORY_DIR = r"G:\My Drive\Rentals\RentalsDB\History"
 HISTORY_FILE = os.path.join(DB_DIR, "history.json")
 CUSTOMERS_FILE = os.path.join(DB_DIR, "customers_data.json")
 
 
 def load_history():
+    """Load history entries from either a single history.json (legacy TK format)
+    or per-file JSONs in the History folder. Returns a list of (key, data_dict).
+    The returned data_dict is the actual receipt data (has fields like 'customer','Date').
+    """
     entries = []
+    # 1) Try legacy single history file (history.json)
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+                h = json.load(f)
+            if isinstance(h, dict):
+                for key in sorted(h.keys(), reverse=True):
+                    entry = h.get(key)
+                    # entry may be {customer: data} or directly data
+                    if isinstance(entry, dict) and len(entry) == 1:
+                        # {customer: data}
+                        inner = list(entry.values())[0]
+                        if isinstance(inner, dict):
+                            entries.append((key, inner))
+                        else:
+                            entries.append((key, {}))
+                    elif isinstance(entry, dict):
+                        # assume entry is data dict
+                        entries.append((key, entry))
+    except Exception:
+        pass
+
+    # 2) Load per-file JSONs from History directory
     if os.path.exists(HISTORY_DIR):
         for filename in sorted(os.listdir(HISTORY_DIR), reverse=True):
             if not filename.endswith('.json'):

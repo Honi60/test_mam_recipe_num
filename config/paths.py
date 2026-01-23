@@ -13,7 +13,8 @@ IMAGES_DIR = os.path.join(RESOURCES_DIR, 'images')
 DATA_DIR = os.path.join(RESOURCES_DIR, 'data')
 
 # Data directories
-DB_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB"
+RECIEPT_ROOT = "E:\\My Drive\Rentals"
+DB_DIR = "E:\\My Drive\\Rentals\\RentalsDB"
 HISTORY_DIR = os.path.join(DB_DIR, "History")
 CUSTOMERS_FILE = os.path.join(DB_DIR, "customers_data.json")
 HISTORY_FILE = os.path.join(DB_DIR, "history.json")

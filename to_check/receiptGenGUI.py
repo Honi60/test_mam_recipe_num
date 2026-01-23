@@ -2,13 +2,13 @@ import os
 import json
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from logic.receiptGen import create_receipt
+from receiptGen import create_receipt
 from bidi.algorithm import get_display
 
 class ReceiptGenGUI:
     def __init__(self, master):
         # Central DB directory for shared files
-        self.DB_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB"
+        self.DB_DIR = r"G:\My Drive\Rentals\RentalsDB"
         # Ensure DB_DIR exists when needed (writes will create it as necessary)
         try:
             os.makedirs(self.DB_DIR, exist_ok=True)

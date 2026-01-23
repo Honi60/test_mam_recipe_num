@@ -1,12 +1,15 @@
 import os
 import sys
 import json
-import logging
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QLabel, QLineEdit, QComboBox, QFileDialog, QMessageBox, QFrame)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont
 from datetime import datetime
+# Add parent directory to path for imports when running standalone
+if __name__ == '__main__':
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.paths import DB_DIR, CUSTOMERS_FILE
 # When run as a script (python QtGUI\receiptGenGUI_qt.py) the package root
 # may not be on sys.path. Try importing normally and fall back to adding the
 # parent directory to sys.path so sibling packages like `logic` can be found.
@@ -23,9 +26,8 @@ from bidi.algorithm import get_display
 class ReceiptGenGUI_Qt(QWidget):
     def __init__(self):
         super().__init__()
-        self.DB_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB"
         try:
-            os.makedirs(self.DB_DIR, exist_ok=True)
+            os.makedirs(DB_DIR, exist_ok=True)
         except Exception:
             pass
         
@@ -33,16 +35,8 @@ class ReceiptGenGUI_Qt(QWidget):
         self.entries = {}
         self.save_path = None
         self.customer_file_path = None
-        self.prefs_file = os.path.join(self.DB_DIR, "prefs.json")
-        self.prefs = {}
         self.last_saved_file = None
         # Load preferences (like last customer file dir) if present
-        try:
-            if os.path.exists(self.prefs_file):
-                with open(self.prefs_file, "r", encoding="utf-8") as pf:
-                    self.prefs = json.load(pf)
-        except Exception:
-            self.prefs = {}
         self.customers = {}
         self.selected_customer = ""
         
@@ -56,6 +50,9 @@ class ReceiptGenGUI_Qt(QWidget):
         self.hebrew_font.setPointSize(10)
         
         self.init_ui()
+        customer_file = os.path.join(DB_DIR, CUSTOMERS_FILE)
+        if os.path.exists(customer_file):
+            self.read_customers_data(customer_file, popup=False)
     
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -106,42 +103,40 @@ class ReceiptGenGUI_Qt(QWidget):
         layout.addStretch()
     
     def load_customer_file(self):
-        initial = self.prefs.get("last_customer_dir", self.DB_DIR)
+        initial = DB_DIR
         file_path, _ = QFileDialog.getOpenFileName(self, "Select Customer Data File", initial, "JSON Files (*.json)")
         if file_path:
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                
-                # Handle both dict and list structures
-                if isinstance(data, dict):
-                    self.customers = data
-                elif isinstance(data, list):
-                    # Convert list to dict with customer names as keys
-                    self.customers = {}
-                    for item in data:
-                        if isinstance(item, dict) and 'customer' in item:
-                            customer_name = item['customer']
-                            self.customers[customer_name] = item
-                        elif isinstance(item, str):
-                            self.customers[item] = {"customer": item}
-                else:
-                    QMessageBox.critical(self, "Error", "Invalid customer data format")
-                    return
-                
-                self.customer_dropdown.clear()
-                self.customer_dropdown.addItems(sorted(self.customers.keys()))
-                # Remember where the user opened the customer data file
-                self.customer_file_path = file_path
-                try:
-                    self.prefs["last_customer_dir"] = os.path.dirname(file_path)
-                    with open(self.prefs_file, "w", encoding="utf-8") as pf:
-                        json.dump(self.prefs, pf, ensure_ascii=False, indent=2)
-                except Exception:
-                    pass
+            self.read_customers_data(file_path)
+
+    def read_customers_data(self, file_path, popup=True):
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Handle both dict and list structures
+            if isinstance(data, dict):
+                self.customers = data
+            elif isinstance(data, list):
+                # Convert list to dict with customer names as keys
+                self.customers = {}
+                for item in data:
+                    if isinstance(item, dict) and 'customer' in item:
+                        customer_name = item['customer']
+                        self.customers[customer_name] = item
+                    elif isinstance(item, str):
+                        self.customers[item] = {"customer": item}
+            else:
+                QMessageBox.critical(self, "Error", "Invalid customer data format")
+                return
+            
+            self.customer_dropdown.clear()
+            self.customer_dropdown.addItems(sorted(self.customers.keys()))
+            # Remember where the user opened the customer data file
+            self.customer_file_path = file_path
+            if popup:
                 QMessageBox.information(self, "Success", f"Loaded {len(self.customers)} customers")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to load file: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load file: {e}")
     
     def on_customer_selected(self, index):
         if index >= 0 and index < self.customer_dropdown.count():
@@ -206,7 +201,7 @@ class ReceiptGenGUI_Qt(QWidget):
             self.open_folder_btn.setEnabled(True)
         
         # Attempt to pre-fill recipeNum from the shared receipt_number.txt if available
-        recipe_num_path = os.path.join(self.DB_DIR, "receipt_number.txt")
+        recipe_num_path = os.path.join(DB_DIR, "receipt_number.txt")
         try:
             with open(recipe_num_path, "r", encoding="utf-8") as f:
                 next_num = f.read().strip()
@@ -226,10 +221,7 @@ class ReceiptGenGUI_Qt(QWidget):
             # If this field is recipeNum, prefer the customer's own value unless it's empty/zero
             if key == "recipeNum":
                 cust_rn = str(self.data.get("recipeNum", "")).strip()
-                if (not cust_rn or cust_rn == '0') and next_num:
-                    entry.setText(str(next_num))
-                else:
-                    entry.setText(cust_rn)
+                entry.setText(str(next_num))
             else:
                 entry.setText(str(self.data.get(key, "")))
             entry.setFont(self.hebrew_font)
@@ -262,19 +254,26 @@ class ReceiptGenGUI_Qt(QWidget):
             QMessageBox.warning(self, "Error", "Please select a customer")
             return
         
+        # Check for "?" in form data
+        fields_with_question_mark = []
+        for key, entry in self.entries.items():
+            if "?" in entry.text():
+                fields_with_question_mark.append(key)
+        
+        if fields_with_question_mark:
+            fields_str = ", ".join(fields_with_question_mark)
+            QMessageBox.warning(self, "Invalid Data", 
+                              f"The following fields contain '?':\n{fields_str}\n\nPlease fix these fields before generating the receipt.")
+            return
+        
         # Collect data from form
-        logger = logging.getLogger(__name__)
         for key, entry in self.entries.items():
             self.data[key] = entry.text()
-            try:
-                logger.debug("collected data recipeNum=%r", self.data.get('recipeNum'))
-            except Exception:
-                pass
 
         # The receipt number must come only from the shared `receipt_number.txt`.
         # Read it and validate it; do not accept or use any number from the
         # customer JSON or GUI fields as the authoritative number.
-        recipe_num_path = os.path.join(self.DB_DIR, "receipt_number.txt")
+        recipe_num_path = os.path.join(DB_DIR, "receipt_number.txt")
         try:
             with open(recipe_num_path, "r", encoding="utf-8") as f:
                 v = f.read().strip()
@@ -342,10 +341,7 @@ class ReceiptGenGUI_Qt(QWidget):
             create_receipt(self.data, output_path)
             
             # Record the exact saved file so we can open and select it later
-            try:
-                self.last_saved_file = output_path
-            except Exception:
-                self.last_saved_file = None
+            self.last_saved_file = output_path
             self.open_folder_btn.setEnabled(True)
             # Show exact saved file in the path display for clarity
             try:
@@ -354,7 +350,7 @@ class ReceiptGenGUI_Qt(QWidget):
                 pass
             # Save history record as JSON so the Recreate tab can load it
             try:
-                history_dir = os.path.join(self.DB_DIR, "History")
+                history_dir = os.path.join(DB_DIR, "History")
                 os.makedirs(history_dir, exist_ok=True)
                 ts = datetime.now().strftime("%Y%m%dT%H%M%S")
                 hist_name = f"{self.selected_customer}_{ts}.json"
@@ -376,7 +372,7 @@ class ReceiptGenGUI_Qt(QWidget):
                 new_num = int(current_num) + 1
                 # Atomic write of next number
                 import tempfile
-                rpath = os.path.join(self.DB_DIR, "receipt_number.txt")
+                rpath = os.path.join(DB_DIR, "receipt_number.txt")
                 d = os.path.dirname(rpath) or '.'
                 fd, tmp_r = tempfile.mkstemp(prefix='.tmp', dir=d, text=True)
                 try:
@@ -386,7 +382,7 @@ class ReceiptGenGUI_Qt(QWidget):
                         try:
                             os.fsync(tf.fileno())
                         except Exception:
-                            logger.debug("Could not fsync temp receipt_number file %s", tmp_r)
+                            pass
                     os.replace(tmp_r, rpath)
                 except Exception:
                     # Clean up temp file on failure
@@ -397,8 +393,6 @@ class ReceiptGenGUI_Qt(QWidget):
                         pass
                     raise
             except Exception:
-                logger = logging.getLogger(__name__)
-                logger.exception("Failed to atomically update receipt_number.txt to next value")
                 QMessageBox.critical(self, "Critical Error",
                                      "Failed to update 'receipt_number.txt' to the next number. Receipt generation aborted to avoid issuing untracked numbers. Please fix the file and try again.")
                 # Note: We do not update customer file when the shared write fails
@@ -416,160 +410,88 @@ class ReceiptGenGUI_Qt(QWidget):
             # was just persisted to `receipt_number.txt` (previous+1 was written
             # and assigned was the previous value).
             try:
-                wrote = self._update_customer_file(new_num, assigned_num_str)
+                update_data = {
+                    'SaveFolder': os.path.normpath(self.save_path) if self.save_path else None,
+                    'CheckNumber': self.entries['CheckNumber'].text()
+                }
+               
+                update_data = {k: v for k, v in update_data.items() if v is not None}
+                wrote = self._update_customer_file(self.customer_file_path, self.selected_customer, update_data)
                 if not wrote:
                     try:
                         self._notify_nonmodal("Warning", "Failed to save customer data to disk. Changes may not have been persisted.")
                     except Exception:
-                        logger = logging.getLogger(__name__)
-                        logger.exception("Failed to show non-modal notification after customer update failure")
+                        pass
             except Exception:
-                logger = logging.getLogger(__name__)
-                logger.exception("Unexpected error while updating customer file")
+                pass
             # All updates succeeded (or were ignored); now notify the user
             try:
                 QMessageBox.information(self, "Success", f"Receipt saved to:\n{output_path}")
             except Exception:
-                # If message box fails (headless/testing), just print to stdout
-                try:
-                    logger.info("Receipt saved to: %s", output_path)
-                except Exception:
-                    pass
+                pass
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate receipt: {e}")
     
     def open_receipt_folder(self):
         import subprocess
         # Prefer selecting the last saved file if known; otherwise open the save path
-        target = None
-        if getattr(self, 'last_saved_file', None) and os.path.exists(self.last_saved_file):
-            target = self.last_saved_file
-        elif self.save_path:
-            if os.path.isfile(self.save_path):
-                target = self.save_path
-            else:
-                target = os.path.normpath(os.path.abspath(self.save_path))
-
-        if target:
+        if self.last_saved_file is None:
+            QMessageBox.warning(self, "Warning", "No receipt file to open")
+            return
+        if os.path.exists(self.last_saved_file):
             try:
-                subprocess.Popen(f'explorer /select,"{target}"')
+                subprocess.Popen(f'explorer /select,"{self.last_saved_file}"')
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to open folder: {e}")
+                QMessageBox.critical(self, "Error", f"Failed to open reciept: {e}")
         else:
-            QMessageBox.warning(self, "Warning", "No receipt file or folder to open")
-
-    def _update_customer_file(self, new_num, recipe_num):
-        """Update the original customer file with SaveFolder and recipeNum.
+            QMessageBox.warning(self, "Warning", "No receipt file or folder to open")  
+            
+    def _update_customer_file(self, file_path: str, customer_name: str, new: dict):
+        """Update customer file with new fields while preserving all other fields.
 
         Args:
-            new_num: int or None -- the numeric incremented value (already incremented), or None
-            recipe_num: str -- the recipe number string that was used to save the receipt
-        """
-        logger = logging.getLogger(__name__)
-        if not self.customer_file_path or not self.selected_customer:
-            logger.debug("No customer_file_path or selected_customer; skipping update")
-            return False
+            file_path: str -- path to the customer data file
+            customer_name: str -- the customer name/key to update
+            new: dict -- dictionary of fields to update/add
 
+        Returns:
+            bool -- True if successful, False otherwise
+        """
         try:
-            with open(self.customer_file_path, 'r', encoding='utf-8') as cf:
+            # Read the customer file
+            with open(file_path, 'r', encoding='utf-8') as cf:
                 cust_data = json.load(cf)
         except Exception:
-            logger.exception("Failed to read customer file %s", self.customer_file_path)
             return False
 
-        # Keep it simple: only update 'SaveFolder' and 'CheckNumber' from the
-        # UI values (the user just set them in the form). Prefer values from
-        # `self.data` (as displayed in the form) and `self.save_path`.
         try:
-            # The customer record should reflect the "next" check number
-            # that will be used for the following receipt (i.e. the incremented
-            # value). This makes the customer's CheckNumber represent the next
-            # expected number to be issued. If `new_num` is not provided, fall
-            # back to the provided `recipe_num` (the assigned number) where
-            # possible.
-            formatted_check = None
-            # Prefer the explicitly provided recipe_num (the assigned number)
-            # when present since callers (like generate_receipt) pass the
-            # assigned number and expect it to be recorded on the customer
-            # entry. If recipe_num is not provided, fall back to new_num.
-            if recipe_num is not None:
-                s = str(recipe_num).strip()
-                if s and s.isdigit():
-                    formatted_check = f"{int(s):05d}"
-                elif s:
-                    formatted_check = s
-            elif new_num is not None:
-                try:
-                    formatted_check = f"{int(new_num):05d}"
-                except Exception:
-                    formatted_check = str(new_num)
-
+            # Find and update the customer record
             updated = False
-            # Helper to set values on a dict-like entry
-            def _set_fields_on_entry(e):
-                nonlocal updated
-                if not isinstance(e, dict):
-                    return
-                logger.debug("_set_fields_on_entry called for customer=%r before=%r", e.get('customer'), e)
-                # SaveFolder from the GUI's save_path if present
-                try:
-                    if self.save_path:
-                        e['SaveFolder'] = os.path.normpath(self.save_path)
-                except Exception:
-                    pass
-                # Determine assigned (the exact number used to create the
-                # receipt) and the next-increment (the number that will be
-                # used for subsequent receipts). Prefer recipe_num for the
-                # assigned value when provided; use new_num for the next.
-                assigned_str = None
-                next_str = None
-                if recipe_num is not None:
-                    s = str(recipe_num).strip()
-                    if s and s.isdigit():
-                        assigned_str = f"{int(s):05d}"
-                    elif s:
-                        assigned_str = s
-                if new_num is not None:
-                    try:
-                        next_str = f"{int(new_num):05d}"
-                    except Exception:
-                        next_str = str(new_num)
-
-                # Persist both fields for clarity: CheckNumber records the
-                # assigned value for audit, while recipeNum (legacy) tracks
-                # the next expected number.
-                if assigned_str is not None:
-                    e['CheckNumber'] = assigned_str
-                elif next_str is not None:
-                    e['CheckNumber'] = next_str
-                if next_str is not None:
-                    e['recipeNum'] = next_str
-                elif assigned_str is not None:
-                    e['recipeNum'] = assigned_str
-                logger.debug("_set_fields_on_entry set CheckNumber=%r recipeNum=%r", e.get('CheckNumber'), e.get('recipeNum'))
-                updated = True
-
+            
             if isinstance(cust_data, dict):
-                # mapping or single-customer dict
-                if self.selected_customer in cust_data and isinstance(cust_data[self.selected_customer], dict):
-                    _set_fields_on_entry(cust_data[self.selected_customer])
-                elif cust_data.get('customer') == self.selected_customer:
-                    _set_fields_on_entry(cust_data)
+                # Case 1: Mapping of customer_name -> customer_data
+                if customer_name in cust_data and isinstance(cust_data[customer_name], dict):
+                    cust_data[customer_name].update(new)
+                    updated = True
+                # Case 2: Single customer dict with 'customer' field
+                elif cust_data.get('customer') == customer_name:
+                    cust_data.update(new)
+                    updated = True
             elif isinstance(cust_data, list):
+                # Case 3: List of customer dicts
                 for item in cust_data:
-                    if isinstance(item, dict) and item.get('customer') == self.selected_customer:
-                        _set_fields_on_entry(item)
+                    if isinstance(item, dict) and item.get('customer') == customer_name:
+                        item.update(new)
+                        updated = True
                         break
 
             if not updated:
-                logger.debug("No matching customer entry found in %s to update", self.customer_file_path)
                 return False
 
-            # Persist changes to disk
+            # Atomic write to disk
             try:
-                # Atomic write: write to a temp file in the same dir and rename it
                 import tempfile
-                d = os.path.dirname(self.customer_file_path) or '.'
+                d = os.path.dirname(file_path) or '.'
                 fd, tmp_path = tempfile.mkstemp(prefix='.tmp', dir=d, text=True)
                 try:
                     with os.fdopen(fd, 'w', encoding='utf-8') as tf:
@@ -578,11 +500,9 @@ class ReceiptGenGUI_Qt(QWidget):
                         try:
                             os.fsync(tf.fileno())
                         except Exception:
-                            logger.debug("Could not fsync temp customer file %s", tmp_path)
-                    # Move into place atomically
-                    os.replace(tmp_path, self.customer_file_path)
+                            pass
+                    os.replace(tmp_path, file_path)
                 except Exception:
-                    # Clean up temp file on failure
                     try:
                         if os.path.exists(tmp_path):
                             os.remove(tmp_path)
@@ -590,73 +510,10 @@ class ReceiptGenGUI_Qt(QWidget):
                         pass
                     raise
             except Exception:
-                logger.exception("Failed to write updated customer file %s", self.customer_file_path)
                 return False
-
-            # Reflect the new values in-memory and refresh UI for the selected customer
-            try:
-                # Normalize into mapping and set self.data from the on-disk structure
-                if isinstance(cust_data, dict):
-                    if any(isinstance(v, dict) for v in cust_data.values()):
-                        self.customers = cust_data
-                    elif cust_data.get('customer'):
-                        self.customers = {cust_data['customer']: cust_data}
-                    else:
-                        self.customers = {}
-                elif isinstance(cust_data, list):
-                    self.customers = {}
-                    for item in cust_data:
-                        if isinstance(item, dict) and 'customer' in item:
-                            self.customers[item['customer']] = item
-
-                if self.selected_customer and self.selected_customer in self.customers:
-                    self.data = self.customers[self.selected_customer]
-                    try:
-                        self.populate_form()
-                    except Exception:
-                        logger.exception("Failed to refresh GUI after customer file update")
-                        logger.debug("After populate_form: entries=%r; entry_texts=%r", list(self.entries.keys()), {k: v.text() for k, v in self.entries.items()})
-                    # If we were told the next-increment value, prefer showing
-                    # the next value (new_num) in the form so the user sees the
-                    # number that will be used for the next receipt.
-                    try:
-                        if 'new_num' in locals() and new_num is not None:
-                            logger.debug("Setting GUI next number to %r, entries=%r", new_num, list(self.entries.keys()))
-                            key = 'CheckNumber' if 'CheckNumber' in self.entries else 'recipeNum'
-                            try:
-                                # Update the preferred entry and also keep
-                                # the legacy 'recipeNum' field in sync if
-                                # present so the UI consistently shows the
-                                # next number regardless of which field the
-                                # customer file exposes.
-                                self.entries[key].setText(f"{int(new_num):05d}")
-                                if 'recipeNum' in self.entries and key != 'recipeNum':
-                                    try:
-                                        self.entries['recipeNum'].setText(f"{int(new_num):05d}")
-                                    except Exception:
-                                        logger.exception("Failed to set legacy recipeNum in GUI")
-                            except Exception:
-                                logger.exception("Failed to set next recipeNum in GUI")
-                    except Exception:
-                        logger.exception("Failed to set next recipeNum in GUI after update")
-                    # Update save_path display if present
-                    try:
-                        sp = self.data.get('SaveFolder')
-                        if sp:
-                            self.save_path = os.path.normpath(sp)
-                            try:
-                                self.save_path_display.setText(self.save_path)
-                            except Exception:
-                                pass
-                            self.open_folder_btn.setEnabled(True)
-                    except Exception:
-                        logger.exception("Failed to set save_path after GUI refresh")
-            except Exception:
-                logger.exception("Failed to reload customer data into UI after write")
 
             return True
         except Exception:
-            logger.exception("Unexpected error while updating customer data")
             return False
 
     def _notify_nonmodal(self, title: str, message: str, timeout_ms: int = 3000):
@@ -666,7 +523,6 @@ class ReceiptGenGUI_Qt(QWidget):
         automatically after `timeout_ms` milliseconds. Designed to be resilient
         in headless/test environments (exceptions are caught and logged).
         """
-        logger = logging.getLogger(__name__)
         try:
             # In headless/offscreen test environments creating and showing
             # actual QMessageBox widgets can crash the Qt runtime (access
@@ -674,7 +530,6 @@ class ReceiptGenGUI_Qt(QWidget):
             # creating GUI widgets and fall back to logging so tests and
             # headless runs are safe.
             if os.environ.get('QT_QPA_PLATFORM', '').lower() == 'offscreen':
-                logger.warning("%s: %s", title, message)
                 return
             mbox = QMessageBox(self)
             mbox.setWindowTitle(title)
@@ -695,10 +550,9 @@ class ReceiptGenGUI_Qt(QWidget):
                 try:
                     QMessageBox.information(self, title, message)
                 except Exception:
-                    # Last resort: log the message so tests can inspect logs
-                    logger.warning("%s: %s", title, message)
+                    pass
         except Exception:
-            logger.exception("Failed to show non-modal notification")
+            pass
 
 
 def main():

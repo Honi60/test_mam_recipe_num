@@ -1,7 +1,6 @@
 import os
 import json
 import tempfile
-import logging
 from PyQt5.QtWidgets import QApplication
 
 # Ensure project root is on sys.path when tests run under pytest
@@ -27,8 +26,7 @@ def make_widget(tmp_path):
     return widget
 
 
-def test_update_customer_mapping(tmp_path, caplog):
-    caplog.set_level(logging.DEBUG)
+def test_update_customer_mapping(tmp_path):
     widget = make_widget(tmp_path)
 
     cust_file = tmp_path / "customers.json"
