@@ -1,6 +1,6 @@
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, QMessageBox
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
 
@@ -9,7 +9,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 # Import configuration
-from config.paths import ensure_directories_exist, MAIN_ICON, HISTORY_DIR
+from config.paths import ensure_directories_exist, MAIN_ICON, HISTORY_DIR, get_mode_label, USE_SIMULATION
 
 # Import the four PyQt5 GUI modules
 from QtGUI.receiptGenGUI_qt import ReceiptGenGUI_Qt
@@ -25,7 +25,9 @@ os.makedirs(HISTORY_DIR, exist_ok=True)
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Receipt Tools")
+        mode_text = f"[{get_mode_label()}]" if USE_SIMULATION else f"[{get_mode_label()}]"
+        title = f"Receipt Tools {mode_text}"
+        self.setWindowTitle(title)
         self.setGeometry(100, 100, 1200, 750)
         
         # Set window icon
@@ -68,7 +70,36 @@ class MainWindow(QMainWindow):
     def on_tab_changed(self, index):
         """Reload data when user switches to certain tabs"""
         tab_widget = self.tabs.widget(index)
+        tab_name = self.tabs.tabText(index)
+        
         try:
+            # Check if switching to tabs that need customer data reload
+            if tab_widget == self.gen_app or tab_widget == self.cust_app:
+                # Ask user if they want to reload customer file
+                reply = QMessageBox.question(
+                    self,
+                    "Reload Customer File",
+                    f"Do you want to reload the customer file for '{tab_name}' tab?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                
+                if reply == QMessageBox.Yes:
+                    if hasattr(self.gen_app, 'read_customers_data') and tab_widget == self.gen_app:
+                        # For ReceiptGenGUI - reload from CUSTOMERS_FILE
+                        from config.paths import DB_DIR
+                        customers_file = os.path.join(DB_DIR, "customers_data.json")
+                        if os.path.exists(customers_file):
+                            self.gen_app.read_customers_data(customers_file, popup=False)
+                            QMessageBox.information(self, "Success", "Customer file reloaded for Generate Receipt tab")
+                    elif hasattr(self.cust_app, 'load_customers') and tab_widget == self.cust_app:
+                        # For CustomerEditor - reload customers
+                        self.cust_app.load_customers()
+                        self.cust_app.refresh_list()
+                        self.cust_app.on_customer_selected()
+                        QMessageBox.information(self, "Success", "Customer file reloaded for Customers tab")
+            
+            # Reload history for other tabs
             if hasattr(self.rec_app, 'reload_history') and tab_widget == self.rec_app:
                 self.rec_app.reload_history()
             elif hasattr(self.excel_app, 'reload_history') and tab_widget == self.excel_app:

@@ -1,0 +1,232 @@
+JSON files with missing Date field
+Scan date: {
+  "timestamp": "E:\\My Drive\\Rentals\\reciptGen"
+}
+Total files scanned: 56
+Files with proper dates: 56
+Files with missing dates: 56
+
+File: 01730.json
+Receipt #: 01730
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01731.json
+Receipt #: 01731
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01732.json
+Receipt #: 01732
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01733.json
+Receipt #: 01733
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01734.json
+Receipt #: 01734
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01735.json
+Receipt #: 01735
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01738.json
+Receipt #: 01738
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01739.json
+Receipt #: 01739
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01740.json
+Receipt #: 01740
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01741.json
+Receipt #: 01741
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01742.json
+Receipt #: 01742
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01743.json
+Receipt #: 01743
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01744.json
+Receipt #: 01744
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01745.json
+Receipt #: 01745
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01746.json
+Receipt #: 01746
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01747.json
+Receipt #: 01747
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01758.json
+Receipt #: 01758
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01782.json
+Receipt #: 01782
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01783.json
+Receipt #: 01783
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: 01786.json
+Receipt #: 01786
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: Binyamin_20260425_152457_00002.json
+Receipt #: Binyamin_20260425_152457_00002
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: Ela_20260112_000000_01764.json
+Receipt #: Ela_20260112_000000_01764
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: Ela_20260214_212315_01773.json
+Receipt #: Ela_20260214_212315_01773
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: אילנה_אקרונוב_מכון_יופי_20251110_000000_01749.json
+Receipt #: אילנה_אקרונוב_מכון_יופי_20251110_000000_01749
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: אילנה_אקרונוב_מכון_יופי_20251210_000000_01759.json
+Receipt #: אילנה_אקרונוב_מכון_יופי_20251210_000000_01759
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: אילנה_אקרונוב_מכון_יופי_20251210_000000_01760.json
+Receipt #: אילנה_אקרונוב_מכון_יופי_20251210_000000_01760
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: אילנה_אקרונוב_מכון_יופי_20260113_000000_01768.json
+Receipt #: אילנה_אקרונוב_מכון_יופי_20260113_000000_01768
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: אילנה_אקרונוב_מכון_יופי_20260113_000000_01769.json
+Receipt #: אילנה_אקרונוב_מכון_יופי_20260113_000000_01769
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: אילנה_אקרונוב_מכון_יופי_20260213_000000_01770.json
+Receipt #: אילנה_אקרונוב_מכון_יופי_20260213_000000_01770
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: אילנה_אקרונוב_מכון_יופי_20260213_000000_01771.json
+Receipt #: אילנה_אקרונוב_מכון_יופי_20260213_000000_01771
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: אילנה_אקרונוב_מכון_יופי_20260413_000000_01784.json
+Receipt #: אילנה_אקרונוב_מכון_יופי_20260413_000000_01784
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: אילנה_אקרונוב_מכון_יופי_20260413_000000_01785.json
+Receipt #: אילנה_אקרונוב_מכון_יופי_20260413_000000_01785
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: בנימין_תכשיטי_יהלום_20260110_000000_01779.json
+Receipt #: בנימין_תכשיטי_יהלום_20260110_000000_01779
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: גזוז_בתי_קפה_בראשון_20251130_000000_01754.json
+Receipt #: גזוז_בתי_קפה_בראשון_20251130_000000_01754
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: גזוז_בתי_קפה_בראשון_20251231_000000_01763.json
+Receipt #: גזוז_בתי_קפה_בראשון_20251231_000000_01763
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: דליה_דניאל_מכון_יופי_20251110_000000_01750.json
+Receipt #: דליה_דניאל_מכון_יופי_20251110_000000_01750
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: דליה_דניאל_מכון_יופי_20251210_000000_01761.json
+Receipt #: דליה_דניאל_מכון_יופי_20251210_000000_01761
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: דליה_דניאל_מכון_יופי_20251210_000000_01781.json
+Receipt #: דליה_דניאל_מכון_יופי_20251210_000000_01781
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: דליה_דניאל_מכון_יופי_20260210_000000_01777.json
+Receipt #: דליה_דניאל_מכון_יופי_20260210_000000_01777
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: טל_ביבי_20251102_000000_01748.json
+Receipt #: טל_ביבי_20251102_000000_01748
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: טל_ביבי_20251202_000000_01757.json
+Receipt #: טל_ביבי_20251202_000000_01757
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: טל_ביבי_20260102_000000_01765.json
+Receipt #: טל_ביבי_20260102_000000_01765
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: טל_ביבי_20260121_000000_01765.json
+Receipt #: טל_ביבי_20260121_000000_01765
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: טל_ביבי_20260202_000000_01774.json
+Receipt #: טל_ביבי_20260202_000000_01774
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: טל_ביבי_20260304_000000_01780.json
+Receipt #: טל_ביבי_20260304_000000_01780
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: כהן_נתן_20260225_000000_01776.json
+Receipt #: כהן_נתן_20260225_000000_01776
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: כהן_צדק_מרדכי_אל_הטבע_20251112_000000_01751.json
+Receipt #: כהן_צדק_מרדכי_אל_הטבע_20251112_000000_01751
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: כהן_צדק_מרדכי_אל_הטבע_20251212_000000_01761.json
+Receipt #: כהן_צדק_מרדכי_אל_הטבע_20251212_000000_01761
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: כהן_צדק_מרדכי_אל_הטבע_20260115_000000_01767.json
+Receipt #: כהן_צדק_מרדכי_אל_הטבע_20260115_000000_01767
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: כהן_צדק_מרדכי_אל_הטבע_20260212_000000_01772.json
+Receipt #: כהן_צדק_מרדכי_אל_הטבע_20260212_000000_01772
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: נכהן_נתן_20251117_000000_01753.json
+Receipt #: נכהן_נתן_20251117_000000_01753
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: קמי_אשכנזי_פארק_20251113_000000_01752.json
+Receipt #: קמי_אשכנזי_פארק_20251113_000000_01752
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: קמי_אשכנזי_פארק_20251213_000000_01762.json
+Receipt #: קמי_אשכנזי_פארק_20251213_000000_01762
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: קמי_אשכנזי_פארק_20260113_000000_01766.json
+Receipt #: קמי_אשכנזי_פארק_20260113_000000_01766
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: קמי_אשכנזי_פארק_20260113_000000_01775.json
+Receipt #: קמי_אשכנזי_פארק_20260113_000000_01775
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------
+File: קמי_אשכנזי_פארק_20260213_000000_01778.json
+Receipt #: קמי_אשכנזי_פארק_20260213_000000_01778
+Issue: Error reading file: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+----------------------------------------

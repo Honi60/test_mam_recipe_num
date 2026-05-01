@@ -1,0 +1,21 @@
+{
+  "data": {
+    "recipeNum": "01738",
+    "discription": "25 רבמטפס תוריכש הלבק זוזג",
+    "invoice_no": "0",
+    "customer": "25 רבמטפס תוריכש הלבק זוזג",
+    "payment": "10738",
+    "mamVal": "18%",
+    "bankAccount": "",
+    "BankNumber": "",
+    "CheckNumber": "",
+    "bank_transfer_referance": "",
+    "transfer_bankAccount": "",
+    "Date": "30/9/25",
+    "SaveFolder": "E:\\My Drive\\Rentals\\גזוז"
+  },
+  "info": {
+    "creation_date": "2026-01-13 22:59:44",
+    "customer_name": "Gazoz"
+  }
+}

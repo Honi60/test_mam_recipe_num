@@ -133,7 +133,7 @@ def create_receipt(data, saveNmae):
     x, y = inkScapeToReplib(11, 5*9+55.75, 13, 3.5, PH, "Helvetica", 10)
     c.drawRightString(x*mm, y*mm, data["payment"])
     x, y = inkScapeToReplib(11, 5*8+55.75, 13, 3.5, PH, "Helvetica", 10)
-    c.drawRightString(x*mm, y*mm, data["mamVal"])
+    # c.drawRightString(x*mm, y*mm, data["mamVal"])
     rtl_text = get_display(data["customer"])  # Corrects Hebrew order
     # Use the selected Hebrew font (falls back to a safe default if Alef is unavailable)
     c.setFont(HEBREW_FONT, 12)

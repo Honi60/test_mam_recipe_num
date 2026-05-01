@@ -2,8 +2,8 @@
 
 # Application info
 APP_NAME = "Receipt Tools"
-APP_VERSION = "1.0.0"
-APP_AUTHOR = "Your Name"
+APP_VERSION = "1.1.0"
+APP_AUTHOR = "Hanina Golan"
 
 # Window settings
 WINDOW_WIDTH = 1200

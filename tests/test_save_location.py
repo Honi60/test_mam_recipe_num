@@ -43,6 +43,11 @@ def test_choose_save_location_and_generate(monkeypatch, tmp_path):
 
     monkeypatch.setattr(gui_mod, "create_receipt", fake_create_receipt)
 
+    # Prevent modal dialogs in headless tests
+    monkeypatch.setattr(gui_mod.QMessageBox, 'information', lambda *a, **k: None)
+    monkeypatch.setattr(gui_mod.QMessageBox, 'warning', lambda *a, **k: None)
+    monkeypatch.setattr(gui_mod.QMessageBox, 'critical', lambda *a, **k: None)
+
     # Choose a save location and assert the widget updated its internal state and display
     widget.choose_save_location()
     assert widget.save_path == test_dir
@@ -64,6 +69,20 @@ def test_choose_save_location_and_generate(monkeypatch, tmp_path):
     widget.customer_dropdown.setCurrentIndex(0)
     assert widget.save_path == os.path.normpath(test_path)
     assert widget.save_path_display.text() == os.path.normpath(test_path)
+
+
+def test_relative_savefolder_resolves_under_receipt_root(monkeypatch, tmp_path):
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    app = QApplication.instance() or QApplication([])
+    from QtGUI.receiptGenGUI_qt import ReceiptGenGUI_Qt
+    widget = ReceiptGenGUI_Qt()
+    # Simulate relative SaveFolder from JSON
+    widget.customers = {"Carl": {"customer": "Carl", "SaveFolder": "reports"}}
+    widget.customer_dropdown.clear()
+    widget.customer_dropdown.addItems(["Carl"])
+    widget.customer_dropdown.setCurrentIndex(0)
+    from config.paths import RECIEPT_ROOT
+    assert widget.save_path == os.path.normpath(os.path.join(RECIEPT_ROOT, "reports"))
 
 
 def test_recipe_num_prefill_and_increment(monkeypatch, tmp_path):
@@ -95,9 +114,12 @@ def test_recipe_num_prefill_and_increment(monkeypatch, tmp_path):
     os.makedirs(out_dir, exist_ok=True)
     widget.save_path = out_dir
 
-    # Monkeypatch create_receipt to avoid heavy I/O
+    # Monkeypatch create_receipt and message boxes for headless tests
     import QtGUI.receiptGenGUI_qt as gui_mod
     monkeypatch.setattr(gui_mod, "create_receipt", lambda data, path: open(path, "wb").write(b"pdf"))
+    monkeypatch.setattr(gui_mod.QMessageBox, 'information', lambda *a, **k: None)
+    monkeypatch.setattr(gui_mod.QMessageBox, 'warning', lambda *a, **k: None)
+    monkeypatch.setattr(gui_mod.QMessageBox, 'critical', lambda *a, **k: None)
 
     # Generate and verify receipt creation and increment of the recipe number
     widget.generate_receipt()
@@ -204,6 +226,9 @@ def test_prefs_remember_last_customer_dir(monkeypatch, tmp_path):
             f.write(b"pdf")
         saved.setdefault("path", path)
     monkeypatch.setattr(gui_mod, "create_receipt", fake_create)
+    # Ensure receipt_number file exists, as generate_receipt requires it
+    with open(os.path.join(widget.DB_DIR, "receipt_number.txt"), "w", encoding="utf-8") as rf:
+        rf.write("00001")
 
     widget.generate_receipt()
 

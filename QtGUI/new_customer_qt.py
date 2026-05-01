@@ -11,7 +11,41 @@ from bidi.algorithm import get_display
 # Add parent directory to path for imports when running standalone
 if __name__ == '__main__':
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config.paths import DB_DIR, RECIEPT_ROOT
+from config.paths import DB_DIR, RECIEPT_ROOT, get_mode_label, USE_SIMULATION
+
+
+def resolve_save_folder(raw_save_folder):
+    if not raw_save_folder:
+        return None
+    _v = os.path.expanduser(str(raw_save_folder).strip())
+    if os.path.isabs(_v):
+        return os.path.normpath(_v)
+    return os.path.normpath(os.path.join(RECIEPT_ROOT, _v))
+
+
+def save_folder_for_storage(abs_save_folder):
+    if not abs_save_folder:
+        return None
+    folder = os.path.normpath(os.path.expanduser(str(abs_save_folder)))
+    root = os.path.normpath(RECIEPT_ROOT)
+    try:
+        if os.path.commonpath([root, folder]) == root:
+            return os.path.normpath(os.path.relpath(folder, root))
+    except Exception:
+        pass
+    return folder
+
+
+def _is_rtl_first_char(text: str) -> bool:
+    import unicodedata
+    if not text:
+        return False
+    s = text.strip()
+    if not s:
+        return False
+    ch = s[0]
+    bidi = unicodedata.bidirectional(ch)
+    return bidi in ('R', 'AL', 'AN')
 
 CUSTOMERS_FILE = os.path.join(DB_DIR,"customers_data.json")
 
@@ -103,8 +137,9 @@ class CustomerEditor_Qt(QWidget):
             label.setMinimumWidth(150)
             entry = QLineEdit()
             entry.setFont(self.hebrew_font)
-            entry.setAlignment(Qt.AlignRight)  # RTL
-            entry.textChanged.connect(lambda: self.update_preview())
+            entry.setLayoutDirection(Qt.LeftToRight)
+            entry.setAlignment(Qt.AlignRight if _is_rtl_first_char('') else Qt.AlignLeft)
+            entry.textChanged.connect(lambda text, e=entry: e.setAlignment(Qt.AlignRight if _is_rtl_first_char(text) else Qt.AlignLeft))
             
             if key == "SaveFolder":
                 browse_btn = QPushButton("Browse")
@@ -126,7 +161,7 @@ class CustomerEditor_Qt(QWidget):
         preview_layout = QVBoxLayout()
         preview_layout.addWidget(QLabel("Preview (visual order for printing):"))
         self.preview_label = QLabel("")
-        self.preview_label.setAlignment(Qt.AlignRight)
+        self.preview_label.setAlignment(Qt.AlignLeft)
         self.preview_label.setWordWrap(True)
         self.preview_label.setStyleSheet("border: 1px solid gray; padding: 5px; background-color: white;")
         self.preview_label.setMinimumHeight(60)
@@ -154,6 +189,13 @@ class CustomerEditor_Qt(QWidget):
     def browse_folder(self, entry):
         folder = QFileDialog.getExistingDirectory(self, "Select Save Folder", RECIEPT_ROOT)
         if folder:
+            folder = os.path.normpath(folder)
+            root_norm = os.path.normpath(RECIEPT_ROOT)
+            try:
+                if os.path.commonpath([root_norm, folder]) == root_norm:
+                    folder = os.path.normpath(os.path.relpath(folder, root_norm))
+            except Exception:
+                pass
             entry.setText(folder)
     
     def refresh_list(self):
@@ -228,6 +270,12 @@ class CustomerEditor_Qt(QWidget):
                 return
         try:
             self.update_customer()
+            # Convert SaveFolder to storage format (relative under RECIEPT_ROOT if possible)
+            if self.current and self.current in self.customers:
+                folder_val = self.customers[self.current].get("SaveFolder")
+                if folder_val:
+                    resolved = resolve_save_folder(folder_val)
+                    self.customers[self.current]["SaveFolder"] = save_folder_for_storage(resolved)
             self.backup_customers()
             with open(CUSTOMERS_FILE, "w", encoding="utf-8") as f:
                 json.dump(self.customers, f, ensure_ascii=False, indent=2)
@@ -271,7 +319,8 @@ if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication
     app = QApplication(sys.argv)
     w = CustomerEditor_Qt()
-    w.setWindowTitle('Customer Editor - Standalone Test')
+    mode_text = f"[{get_mode_label()}]" if USE_SIMULATION else f"[{get_mode_label()}]"
+    w.setWindowTitle(f'Customer Editor {mode_text}')
     w.resize(800, 600)
     w.show()
     sys.exit(app.exec_())

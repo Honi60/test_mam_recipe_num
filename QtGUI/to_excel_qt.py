@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt
 # Add parent directory to path for imports when running standalone
 if __name__ == '__main__':
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config.paths import DB_DIR
+from config.paths import DB_DIR, get_mode_label, USE_SIMULATION
 
 # DB_DIR = r"E:\MyGoogleDrive\Rentals\RentalsDB"
 HISTORY_DIR = os.path.join(DB_DIR, "History")
@@ -34,6 +34,17 @@ def _parse_dd_mm_yyyy_or_yy(date_str: str):
             continue
     return None
 
+def _unwrap_history_payload(data):
+    if isinstance(data, dict):
+        if "data" in data and isinstance(data["data"], dict):
+            return data["data"]
+        if len(data) == 1:
+            inner = list(data.values())[0]
+            if isinstance(inner, dict):
+                return inner
+    return data
+
+
 def load_receipts_by_month_year(month: int, year: int):
     """Load receipts matching the specified month/year from History folder."""
     results = []
@@ -47,6 +58,7 @@ def load_receipts_by_month_year(month: int, year: int):
                     fpath = os.path.join(HISTORY_DIR, filename)
                     with open(fpath, 'r', encoding='utf-8') as f:
                         data = json.load(f)
+                    data = _unwrap_history_payload(data)
                     # Try to match date field
                     date_str = data.get('Date', '').strip()
                     if date_str:
@@ -272,7 +284,8 @@ if __name__ == '__main__':
     # Allow this module to run standalone for testing the Recreate UI
     app = QApplication(sys.argv)
     w = ToExcelApp_Qt()
-    w.setWindowTitle('Recreate Receipt - Standalone Test')
+    mode_text = f"[{get_mode_label()}]" if USE_SIMULATION else f"[{get_mode_label()}]"
+    w.setWindowTitle(f'Export to Excel {mode_text}')
     w.resize(800, 600)
     w.show()
     sys.exit(app.exec_())

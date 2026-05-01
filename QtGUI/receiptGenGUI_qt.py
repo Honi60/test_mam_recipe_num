@@ -1,3 +1,4 @@
+import ast
 import os
 import sys
 import json
@@ -9,7 +10,7 @@ from datetime import datetime
 # Add parent directory to path for imports when running standalone
 if __name__ == '__main__':
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config.paths import DB_DIR, CUSTOMERS_FILE
+from config.paths import DB_DIR, CUSTOMERS_FILE, RECIEPT_ROOT, get_mode_label, USE_SIMULATION
 # When run as a script (python QtGUI\receiptGenGUI_qt.py) the package root
 # may not be on sys.path. Try importing normally and fall back to adding the
 # parent directory to sys.path so sibling packages like `logic` can be found.
@@ -23,11 +24,67 @@ except ModuleNotFoundError:
 from bidi.algorithm import get_display
 
 
+def resolve_save_folder(raw_save_folder):
+    """Resolve save folder from customer JSON value to an absolute path.
+
+    - If value is relative, resolve under RECIEPT_ROOT.
+    - If value is absolute, leave as-is.
+    - If empty/None, return None.
+    """
+    if not raw_save_folder:
+        return None
+    val = str(raw_save_folder).strip()
+    if not val:
+        return None
+    val = os.path.expanduser(val)
+    if os.path.isabs(val):
+        return os.path.normpath(val)
+    return os.path.normpath(os.path.join(RECIEPT_ROOT, val))
+
+
+def save_folder_for_storage(abs_save_folder):
+    """Convert an absolute save folder to storage form.
+
+    - If under RECIEPT_ROOT, store relative path.
+    - Otherwise store normalized absolute path.
+    """
+    if not abs_save_folder:
+        return None
+    folder = os.path.normpath(os.path.expanduser(str(abs_save_folder)))
+    root = os.path.normpath(RECIEPT_ROOT)
+    try:
+        # On Windows, drives must match for commonpath; ValueError if not.
+        if os.path.commonpath([root, folder]) == root:
+            rel = os.path.relpath(folder, root)
+            return os.path.normpath(rel)
+    except Exception:
+        pass
+    return folder
+
+
+def _is_rtl_first_char(text: str) -> bool:
+    """Return True if the first non-space char in text is strongly RTL.
+
+    This helps align entries so Hebrew text is right-aligned and Latin is left-aligned.
+    """
+    import unicodedata
+    if not text:
+        return False
+    s = text.strip()
+    if not s:
+        return False
+    ch = s[0]
+    bidi = unicodedata.bidirectional(ch)
+    # 'R' = Right-to-Left, 'AL' = Arabic Letter, 'AN' = Arabic Number
+    return bidi in ('R', 'AL', 'AN')
+
+
 class ReceiptGenGUI_Qt(QWidget):
     def __init__(self):
         super().__init__()
+        self.DB_DIR = DB_DIR
         try:
-            os.makedirs(DB_DIR, exist_ok=True)
+            os.makedirs(self.DB_DIR, exist_ok=True)
         except Exception:
             pass
         
@@ -36,6 +93,7 @@ class ReceiptGenGUI_Qt(QWidget):
         self.save_path = None
         self.customer_file_path = None
         self.last_saved_file = None
+        self.prefs_file = os.path.join(self.DB_DIR, "prefs.json")
         # Load preferences (like last customer file dir) if present
         self.customers = {}
         self.selected_customer = ""
@@ -50,9 +108,9 @@ class ReceiptGenGUI_Qt(QWidget):
         self.hebrew_font.setPointSize(10)
         
         self.init_ui()
-        customer_file = os.path.join(DB_DIR, CUSTOMERS_FILE)
+        customer_file = CUSTOMERS_FILE
         if os.path.exists(customer_file):
-            self.read_customers_data(customer_file, popup=False)
+            self.read_customers_data(customer_file, popup=True, show_success=False)
     
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -84,6 +142,7 @@ class ReceiptGenGUI_Qt(QWidget):
         save_layout.addWidget(self.save_btn)
         self.save_path_display = QLineEdit()
         self.save_path_display.setReadOnly(True)
+        self.save_path_display.setAlignment(Qt.AlignLeft)
         self.save_path_display.setPlaceholderText("No save location selected")
         self.save_path_display.setMinimumWidth(300)
         save_layout.addWidget(self.save_path_display)
@@ -103,16 +162,41 @@ class ReceiptGenGUI_Qt(QWidget):
         layout.addStretch()
     
     def load_customer_file(self):
-        initial = DB_DIR
+        initial = self.DB_DIR
         file_path, _ = QFileDialog.getOpenFileName(self, "Select Customer Data File", initial, "JSON Files (*.json)")
         if file_path:
             self.read_customers_data(file_path)
 
-    def read_customers_data(self, file_path, popup=True):
+    def read_customers_data(self, file_path, popup=True, show_success=True):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
+                text = f.read()
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError as je:
+                try:
+                    data = ast.literal_eval(text)
+                except Exception as ae:
+                    snippet = text.strip().replace('\n', ' ')[:200]
+                    line_info = f"line {je.lineno}, column {je.colno}" if hasattr(je, 'lineno') and hasattr(je, 'colno') else "unknown location"
+                    msg = (
+                        "Invalid customer file format. Expected JSON object or list.\n"
+                        f"JSON error ({line_info}): {je}\n"
+                        f"Python-literal parse error: {ae}\n"
+                        f"First 200 chars: {snippet}\n\n"
+                        "Expected examples:\n"
+                        "  {\"Alice\": {\"customer\": \"Alice\", \"recipeNum\": \"00001\"}}\n"
+                        "  [{\"customer\": \"Alice\", \"recipeNum\": \"00001\"}]"
+                    )
+                    if popup:
+                        QMessageBox.critical(self, "Error", msg)
+                    else:
+                        try:
+                            print(f"Failed to load customers file {file_path}: {msg}")
+                        except Exception:
+                            pass
+                    return
+
             # Handle both dict and list structures
             if isinstance(data, dict):
                 self.customers = data
@@ -133,11 +217,27 @@ class ReceiptGenGUI_Qt(QWidget):
             self.customer_dropdown.addItems(sorted(self.customers.keys()))
             # Remember where the user opened the customer data file
             self.customer_file_path = file_path
-            if popup:
+            self._save_last_customer_dir(file_path)
+            if show_success and popup:
                 QMessageBox.information(self, "Success", f"Loaded {len(self.customers)} customers")
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load file: {e}")
-    
+            if popup:
+                QMessageBox.critical(self, "Error", f"Failed to load file: {e}")
+
+    def _save_last_customer_dir(self, file_path):
+        if not file_path:
+            return
+        try:
+            prefs = {}
+            if os.path.exists(self.prefs_file):
+                with open(self.prefs_file, "r", encoding="utf-8") as pf:
+                    prefs = json.load(pf)
+            prefs["last_customer_dir"] = os.path.dirname(file_path)
+            with open(self.prefs_file, "w", encoding="utf-8") as pf:
+                json.dump(prefs, pf, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
     def on_customer_selected(self, index):
         if index >= 0 and index < self.customer_dropdown.count():
             self.selected_customer = self.customer_dropdown.currentText()
@@ -182,11 +282,9 @@ class ReceiptGenGUI_Qt(QWidget):
                     continue
                 if any(tok in klow for tok in ("save", "path", "folder", "output")):
                     if isinstance(val, str) and val:
-                        # If value looks like a filename, take its directory
-                        p = os.path.expanduser(val)
-                        if os.path.splitext(p)[1].lower() == '.pdf':
-                            return os.path.normpath(os.path.dirname(p))
-                        return os.path.normpath(p)
+                        if os.path.splitext(val)[1].lower() == '.pdf':
+                            return resolve_save_folder(os.path.dirname(val))
+                        return resolve_save_folder(val)
             return None
 
         self.entries = {}
@@ -201,7 +299,7 @@ class ReceiptGenGUI_Qt(QWidget):
             self.open_folder_btn.setEnabled(True)
         
         # Attempt to pre-fill recipeNum from the shared receipt_number.txt if available
-        recipe_num_path = os.path.join(DB_DIR, "receipt_number.txt")
+        recipe_num_path = os.path.join(self.DB_DIR, "receipt_number.txt")
         try:
             with open(recipe_num_path, "r", encoding="utf-8") as f:
                 next_num = f.read().strip()
@@ -218,30 +316,36 @@ class ReceiptGenGUI_Qt(QWidget):
             label = QLabel(f"{key}:")
             label.setMinimumWidth(120)
             entry = QLineEdit()
+            
             # If this field is recipeNum, prefer the customer's own value unless it's empty/zero
             if key == "recipeNum":
                 cust_rn = str(self.data.get("recipeNum", "")).strip()
-                entry.setText(str(next_num))
+                if next_num:
+                    entry.setText(str(next_num))
+                else:
+                    entry.setText(cust_rn)
             else:
                 entry.setText(str(self.data.get(key, "")))
             entry.setFont(self.hebrew_font)
-            entry.setAlignment(Qt.AlignRight)  # RTL alignment
+            # Align right only if first non-space char is RTL (Hebrew/Arabic)
+            if _is_rtl_first_char(entry.text()):
+                entry.setAlignment(Qt.AlignRight)
+            else:
+                entry.setAlignment(Qt.AlignLeft)
             h_layout.addWidget(label)
             h_layout.addWidget(entry)
             form_layout.addLayout(h_layout)
             self.entries[key] = entry
     
     def choose_save_location(self):
-        folder = QFileDialog.getExistingDirectory(self, "Select Save Location")
+        folder = QFileDialog.getExistingDirectory(self, "Select Save Location", RECIEPT_ROOT)
         if folder:
             self.save_path = folder
             # Update visible path in the GUI so users see their choice immediately
             try:
                 self.save_path_display.setText(self.save_path)
             except Exception:
-                # If saving display update fails, still proceed but notify the user
                 pass
-            # Enable the "Open Receipt Folder" button so user can jump to the folder
             self.open_folder_btn.setEnabled(True)
             QMessageBox.information(self, "Save Location", f"Set to: {self.save_path}")
     
@@ -273,7 +377,7 @@ class ReceiptGenGUI_Qt(QWidget):
         # The receipt number must come only from the shared `receipt_number.txt`.
         # Read it and validate it; do not accept or use any number from the
         # customer JSON or GUI fields as the authoritative number.
-        recipe_num_path = os.path.join(DB_DIR, "receipt_number.txt")
+        recipe_num_path = os.path.join(self.DB_DIR, "receipt_number.txt")
         try:
             with open(recipe_num_path, "r", encoding="utf-8") as f:
                 v = f.read().strip()
@@ -316,6 +420,7 @@ class ReceiptGenGUI_Qt(QWidget):
             return s
 
         # Format date for filename (try dd/mm/YYYY, dd/mm/YY, ISO)
+        # New format: receiptNum_Customer_Date (e.g., 01784_Ilana_salon_13_4_2026)
         date_str = self.data.get("Date", "")
         date_part = ""
         if date_str:
@@ -323,16 +428,19 @@ class ReceiptGenGUI_Qt(QWidget):
             for fmt in ("%d/%m/%Y", "%d/%m/%y", "%Y-%m-%d", "%Y/%m/%d"):
                 try:
                     dt = datetime.strptime(date_str, fmt)
-                    date_part = dt.strftime("%Y%m%d")
+                    # Format as day_month_year without leading zeros (e.g., 13_4_2026)
+                    date_part = f"{dt.day}_{dt.month}_{dt.year}"
                     break
                 except Exception:
                     continue
             if not date_part:
-                date_part = _safe_filename_part(date_str)
+                # Fallback: clean up the date string
+                date_part = _safe_filename_part(date_str).replace("_", "")
 
         customer_part = _safe_filename_part(self.selected_customer)
         recipe_part = _safe_filename_part(str(assigned_num_str))
-        parts = [p for p in (customer_part, recipe_part, date_part) if p]
+        # New convention: receiptNum_Customer_Date
+        parts = [p for p in (recipe_part, customer_part, date_part) if p]
         filename = "_".join(parts) + ".pdf" if parts else f"{self.selected_customer}.pdf"
 
         output_path = os.path.join(self.save_path, filename)
@@ -350,13 +458,21 @@ class ReceiptGenGUI_Qt(QWidget):
                 pass
             # Save history record as JSON so the Recreate tab can load it
             try:
-                history_dir = os.path.join(DB_DIR, "History")
+                history_dir = os.path.join(self.DB_DIR, "History")
                 os.makedirs(history_dir, exist_ok=True)
-                ts = datetime.now().strftime("%Y%m%dT%H%M%S")
-                hist_name = f"{self.selected_customer}_{ts}.json"
+                # New convention: receiptNum_Customer_Date.json (e.g., 01784_Ilana_salon_13_4_2026.json)
+                hist_name = f"{recipe_part}_{customer_part}_{date_part}.json"
                 hist_path = os.path.join(history_dir, hist_name)
+                now = datetime.now()
+                history_record = {
+                    "data": self.data,
+                    "info": {
+                        "creation_date": now.strftime("%Y-%m-%d %H:%M:%S"),
+                        "customer_name": self.selected_customer,
+                    },
+                }
                 with open(hist_path, "w", encoding="utf-8") as hf:
-                    json.dump(self.data, hf, ensure_ascii=False, indent=2)
+                    json.dump(history_record, hf, ensure_ascii=False, indent=2)
             except Exception:
                 # Ignore history save errors but don't block the user
                 pass
@@ -372,7 +488,7 @@ class ReceiptGenGUI_Qt(QWidget):
                 new_num = int(current_num) + 1
                 # Atomic write of next number
                 import tempfile
-                rpath = os.path.join(DB_DIR, "receipt_number.txt")
+                rpath = os.path.join(self.DB_DIR, "receipt_number.txt")
                 d = os.path.dirname(rpath) or '.'
                 fd, tmp_r = tempfile.mkstemp(prefix='.tmp', dir=d, text=True)
                 try:
@@ -398,10 +514,16 @@ class ReceiptGenGUI_Qt(QWidget):
                 # Note: We do not update customer file when the shared write fails
                 # to avoid recording a number that is not safely persisted.
                 return
-            # Update the displayed recipeNum if present to show the next number
-            if "recipeNum" in self.entries:
+            # Update the displayed receipt/check number to the next number for the UI.
+            next_number = f"{new_num:05d}"
+            if "CheckNumber" in self.entries:
                 try:
-                    self.entries["recipeNum"].setText(f"{new_num:05d}")
+                    self.entries["CheckNumber"].setText(next_number)
+                except Exception:
+                    pass
+            elif "recipeNum" in self.entries:
+                try:
+                    self.entries["recipeNum"].setText(next_number)
                 except Exception:
                     pass
             # Update the customer data file with the assigned number for this
@@ -410,13 +532,22 @@ class ReceiptGenGUI_Qt(QWidget):
             # was just persisted to `receipt_number.txt` (previous+1 was written
             # and assigned was the previous value).
             try:
+                check_number = self.data.get('CheckNumber', '')
+                if 'CheckNumber' in self.entries:
+                    check_number = self.entries['CheckNumber'].text()
+                if not check_number:
+                    check_number = assigned_num_str
                 update_data = {
-                    'SaveFolder': os.path.normpath(self.save_path) if self.save_path else None,
-                    'CheckNumber': self.entries['CheckNumber'].text()
+                    'SaveFolder': save_folder_for_storage(self.save_path) if self.save_path else None,
+                    'CheckNumber': check_number,
+                    'recipeNum': f"{new_num:05d}" if 'new_num' in locals() else assigned_num_str
                 }
-               
-                update_data = {k: v for k, v in update_data.items() if v is not None}
-                wrote = self._update_customer_file(self.customer_file_path, self.selected_customer, update_data)
+                update_data = {k: v for k, v in update_data.items() if v}
+                wrote = False
+                try:
+                    wrote = self._update_customer_file(self.customer_file_path, self.selected_customer, update_data)
+                except Exception:
+                    wrote = False
                 if not wrote:
                     try:
                         self._notify_nonmodal("Warning", "Failed to save customer data to disk. Changes may not have been persisted.")
@@ -446,17 +577,43 @@ class ReceiptGenGUI_Qt(QWidget):
         else:
             QMessageBox.warning(self, "Warning", "No receipt file or folder to open")  
             
-    def _update_customer_file(self, file_path: str, customer_name: str, new: dict):
+    def _update_customer_file(self, file_path=None, customer_name=None, new=None):
         """Update customer file with new fields while preserving all other fields.
 
+        Supports legacy calls from old tests: _update_customer_file(recipe_num, check_num).
+
         Args:
-            file_path: str -- path to the customer data file
-            customer_name: str -- the customer name/key to update
+            file_path: str -- path to the customer data file, or legacy recipe number if called in old style
+            customer_name: str -- the customer name/key to update, or legacy check number
             new: dict -- dictionary of fields to update/add
 
         Returns:
             bool -- True if successful, False otherwise
         """
+        # Legacy test compatibility: _update_customer_file(recipe_num, check_num)
+        legacy_new_num = None
+        if new is None and (file_path is None or isinstance(file_path, (int, str))) and isinstance(customer_name, str):
+            if not self.customer_file_path or not self.selected_customer:
+                return False
+            if isinstance(file_path, int):
+                legacy_new_num = file_path
+            else:
+                try:
+                    legacy_new_num = int(str(file_path))
+                except Exception:
+                    legacy_new_num = None
+            # Use current save_path and selected customer from GUI state
+            new_data = {}
+            if self.save_path:
+                new_data['SaveFolder'] = save_folder_for_storage(self.save_path)
+            new_data['CheckNumber'] = customer_name
+            file_path = self.customer_file_path
+            customer_name = self.selected_customer
+            new = new_data
+
+        if not file_path or not customer_name or not isinstance(new, dict):
+            return False
+
         try:
             # Read the customer file
             with open(file_path, 'r', encoding='utf-8') as cf:
@@ -512,6 +669,46 @@ class ReceiptGenGUI_Qt(QWidget):
             except Exception:
                 return False
 
+            # Refresh GUI fields for the selected customer if possible.
+            try:
+                if self.selected_customer:
+                    # Update in-memory customer store if loaded
+                    if isinstance(self.customers, dict) and self.selected_customer in self.customers:
+                        if isinstance(self.customers[self.selected_customer], dict):
+                            self.customers[self.selected_customer].update(new)
+                    # Update current data and visible fields
+                    if isinstance(self.data, dict):
+                        self.data.update(new)
+                    if self.save_path:
+                        try:
+                            self.save_path_display.setText(os.path.normpath(self.save_path))
+                        except Exception:
+                            pass
+                    number_field = None
+                    if "CheckNumber" in self.entries:
+                        number_field = "CheckNumber"
+                    elif "recipeNum" in self.entries:
+                        number_field = "recipeNum"
+                    if number_field is not None:
+                        number_to_set = None
+                        if legacy_new_num is not None:
+                            number_to_set = f"{legacy_new_num:05d}"
+                        elif isinstance(new, dict) and new.get("recipeNum"):
+                            number_to_set = str(new.get("recipeNum"))
+                        elif isinstance(new, dict) and new.get("CheckNumber"):
+                            number_to_set = str(new.get("CheckNumber"))
+                        elif isinstance(recipe_num, str):
+                            number_to_set = str(recipe_num)
+                        elif isinstance(recipe_num, int):
+                            number_to_set = f"{recipe_num:05d}"
+
+                        if number_to_set is not None:
+                            try:
+                                self.entries[number_field].setText(number_to_set)
+                            except Exception:
+                                pass
+            except Exception:
+                pass
             return True
         except Exception:
             return False
@@ -565,7 +762,8 @@ def main():
     from PyQt5.QtWidgets import QApplication
     app = QApplication.instance() or QApplication([])
     w = ReceiptGenGUI_Qt()
-    w.setWindowTitle("Receipt Generator")
+    mode_text = f"[{get_mode_label()}]" if USE_SIMULATION else f"[{get_mode_label()}]"
+    w.setWindowTitle(f"Receipt Generator {mode_text}")
     w.show()
     app.exec_()
 

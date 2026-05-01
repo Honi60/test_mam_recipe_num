@@ -4,6 +4,29 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from receiptGen import create_receipt
 from bidi.algorithm import get_display
+from config.paths import RECIEPT_ROOT
+
+
+def resolve_save_folder(raw_save_folder):
+    if not raw_save_folder:
+        return None
+    val = os.path.expanduser(str(raw_save_folder).strip())
+    if os.path.isabs(val):
+        return os.path.normpath(val)
+    return os.path.normpath(os.path.join(RECIEPT_ROOT, val))
+
+
+def save_folder_for_storage(abs_save_folder):
+    if not abs_save_folder:
+        return None
+    folder = os.path.normpath(os.path.expanduser(str(abs_save_folder)))
+    root = os.path.normpath(RECIEPT_ROOT)
+    try:
+        if os.path.commonpath([root, folder]) == root:
+            return os.path.normpath(os.path.relpath(folder, root))
+    except Exception:
+        pass
+    return folder
 
 class ReceiptGenGUI:
     def __init__(self, master):
@@ -172,14 +195,18 @@ class ReceiptGenGUI:
             except Exception:
                 pass
             filename = f"{customer_name} {recipe_num} {month_year}.pdf".strip()
-            # If SaveFolder is relative or empty, save into DB_DIR by default
-            save_folder = self.data.get('SaveFolder') or self.DB_DIR
+            # If SaveFolder is relative, resolve under RECIEPT_ROOT; if empty use DB_DIR
+            save_folder_value = self.data.get('SaveFolder')
+            save_folder = resolve_save_folder(save_folder_value) if save_folder_value else self.DB_DIR
             if not os.path.isabs(save_folder):
                 save_folder = self.DB_DIR
             self.save_path = os.path.join(save_folder, filename)
         data = {k: v.get() for k, v in self.entries.items()}
         try:
             create_receipt(data, self.save_path)
+            # Save the relative folder for JSON stability
+            self.data['SaveFolder'] = save_folder_for_storage(save_folder)
+
             # Append this receipt to history.json
             try:
                 history_path = os.path.join(self.DB_DIR, "history.json")

@@ -9,6 +9,17 @@ if __name__ == '__main__':
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from logic.receiptGen import create_receipt
+from config.paths import RECIEPT_ROOT
+
+
+def resolve_save_folder(raw_save_folder):
+    if not raw_save_folder:
+        return None
+    val = os.path.expanduser(str(raw_save_folder).strip())
+    if os.path.isabs(val):
+        return os.path.normpath(val)
+    return os.path.normpath(os.path.join(RECIEPT_ROOT, val))
+
 
 DB_DIR = r"G:\My Drive\Rentals\RentalsDB"
 HISTORY_FILE = os.path.join(DB_DIR, "history.json")
@@ -184,7 +195,7 @@ class RecreateReceiptApp(tk.Frame):
         cust_name = list(entry.keys())[0]
         data = entry[cust_name]
         # Ask where to save - default to SaveFolder/filename if present
-        default_folder = data.get("SaveFolder") or DB_DIR
+        default_folder = resolve_save_folder(data.get("SaveFolder")) if data.get("SaveFolder") else DB_DIR
         default_filename = f"{cust_name} {data.get('recipeNum','')}.pdf"
         initial = os.path.join(default_folder, default_filename) if default_folder else ""
         save_path = filedialog.asksaveasfilename(title="Save regenerated receipt as", initialdir=default_folder, initialfile=default_filename, defaultextension=".pdf", filetypes=[("PDF files","*.pdf")])
