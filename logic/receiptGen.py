@@ -1,4 +1,12 @@
 import os
+import sys
+
+# Ensure project root is on sys.path so `config` is resolvable both when
+# running this file directly (logic/receiptGen.py) and when imported from main_qt.
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPDF
 from reportlab.pdfgen import canvas
@@ -6,7 +14,7 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import getFont
-from config.paths import FONT_ALEF_REGULAR, FONT_ALEF_BOLD, RECEIPT_TEMPLATE_TP, HONI_SIGNATURE
+from config.paths import FONT_ALEF_REGULAR, FONT_ALEF_BOLD, RECEIPT_TEMPLATE_TP, HONI_SIGNATURE, CUSTOMERS_FILE
 from bidi.algorithm import get_display
 import json
 
@@ -134,19 +142,23 @@ def create_receipt(data, saveNmae):
     c.drawRightString(x*mm, y*mm, data["payment"])
     x, y = inkScapeToReplib(11, 5*8+55.75, 13, 3.5, PH, "Helvetica", 10)
     # c.drawRightString(x*mm, y*mm, data["mamVal"])
-    rtl_text = get_display(data["customer"])  # Corrects Hebrew order
+    rtl_text = get_display(data["discription"])  # Corrects Hebrew order
     # Use the selected Hebrew font (falls back to a safe default if Alef is unavailable)
     c.setFont(HEBREW_FONT, 12)
     x, y = inkScapeToReplib(32, 55.75, 80, 3.5, PH, HEBREW_FONT, 12)
-    rtl_text = get_display(data["discription"])  # Corrects Hebrew order
     c.drawRightString(x*mm, y*mm, rtl_text)
+    rtl_text = get_display(data["customer"])  # Corrects Hebrew order 
     x, y = inkScapeToReplib(45, 36, 60, 3.5, PH, HEBREW_FONT, 12)
     c.drawRightString(x*mm, y*mm, rtl_text)
+    if data.get('allocation') is not None:
+      x, y = inkScapeToReplib(65, 107, 28, 6, PH, "Helvetica", 10)
+      c.drawRightString(x*mm, y*mm, data.get('allocation'))
     c.setFont(HEBREW_FONT, 10)
     x, y = inkScapeToReplib(11, 115, 104, 10, PH, HEBREW_FONT, 10)
     # Compose optional bank/transfer line. If 'bank_transfer' is present use it directly,
     # otherwise build the line from available fields. If nothing is present, skip drawing.
     bank_text = ''
+   
     if data.get('bank_transfer_referance') is not None and data.get('bank_transfer_referance') != '':
         bank_text = data.get('bank_transfer_referance')
         transfer_account = data.get('transfer_bankAccount')
@@ -184,8 +196,9 @@ def read_customer_data(file_path):
 
 if __name__ == "__main__":
   # Example data
-  cData = read_customer_data(r"E:\MyGoogleDrive\Rentals\RentalsDB\customers_data.json")
+  cData = read_customer_data(CUSTOMERS_FILE)
   sample_data = cData["Dalya"]
   sample_data['bank_transfer_referance'] = '1234567890'
   sample_data['transfer_bankAccount'] = '012909912'
+  sample_data['allocation'] = '213015529'
   create_receipt(sample_data, 'c:/tmp/receipt.pdf')

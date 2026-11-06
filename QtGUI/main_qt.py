@@ -16,6 +16,10 @@ from QtGUI.receiptGenGUI_qt import ReceiptGenGUI_Qt
 from QtGUI.new_customer_qt import CustomerEditor_Qt
 from QtGUI.recrate_receipt_qt import RecreateReceiptApp_Qt
 from QtGUI.to_excel_qt import ToExcelApp_Qt
+from QtGUI.monthly_receipts_qt import MonthlyReceiptsApp_Qt
+
+# Import History Editor from tools
+from tools.history_editor_qt import HistoryEditor
 
 # Ensure necessary directories exist
 ensure_directories_exist()
@@ -64,6 +68,14 @@ class MainWindow(QMainWindow):
         self.excel_app = ToExcelApp_Qt()
         self.tabs.addTab(self.excel_app, "Export to Excel")
         
+        # Tab 5: Monthly Receipts
+        self.monthly_app = MonthlyReceiptsApp_Qt()
+        self.tabs.addTab(self.monthly_app, "Monthly Receipts")
+
+        # Tab 6: History Editor
+        self.history_editor = HistoryEditor()
+        self.tabs.addTab(self.history_editor, "History Editor")
+        
         # Connect tab changed signal
         self.tabs.currentChanged.connect(self.on_tab_changed)
     
@@ -104,6 +116,10 @@ class MainWindow(QMainWindow):
                 self.rec_app.reload_history()
             elif hasattr(self.excel_app, 'reload_history') and tab_widget == self.excel_app:
                 self.excel_app.reload_history()
+            
+            # Refresh History Editor file list when switching to it
+            if tab_widget == self.history_editor and hasattr(self.history_editor, 'refresh_files'):
+                self.history_editor.refresh_files()
         except Exception as e:
             print(f"Error reloading tab: {e}")
 

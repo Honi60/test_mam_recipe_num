@@ -14,14 +14,16 @@ DATA_DIR = os.path.join(RESOURCES_DIR, 'data')
 
 # Data directories - Support development/simulation mode
 # Set to True for simulation (E:\simulation_rentals) or False for production (E:\My Drive\Rentals)
-USE_SIMULATION = True    # Change to True for development/testing
+USE_SIMULATION = False    # Change to True for development/testing
 
 if USE_SIMULATION:
     RECIEPT_ROOT = "E:\\simulation_rentals"
     DB_DIR = "E:\\simulation_rentals\\RentalsDB"
+    ACCOUNT_BOOK = "E:\\simulation_rentals\\תקבולים 2026.xlsx"
 else:
     RECIEPT_ROOT = "E:\\My Drive\\Rentals"
     DB_DIR = "E:\\My Drive\\Rentals\\RentalsDB"
+    ACCOUNT_BOOK = "E:\\My Drive\\Rentals\\תקבולים 2026.xlsx"
 HISTORY_DIR = os.path.join(DB_DIR, "History")
 CUSTOMERS_FILE = os.path.join(DB_DIR, "customers_data.json")
 HISTORY_FILE = os.path.join(DB_DIR, "history.json")
