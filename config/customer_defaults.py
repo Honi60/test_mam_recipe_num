@@ -124,3 +124,18 @@ def get_default_description(customer):
 def set_default_description(customer, description):
     """Set/update the default description for a customer."""
     _set_entry(customer, 'description', str(description or ''))
+
+
+# App-level settings (stored under a reserved key)
+
+_APP_KEY = '__app__'
+
+
+def get_excel_path():
+    """Get the last used account book Excel path, or None."""
+    return _coerce_from_storage(_get_entry(_APP_KEY).get('excel_path'))
+
+
+def set_excel_path(abs_path):
+    """Persist the account book Excel path."""
+    _set_entry(_APP_KEY, 'excel_path', _coerce_to_storage(abs_path))

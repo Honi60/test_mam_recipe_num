@@ -18,6 +18,7 @@ from config.paths import ACCOUNT_BOOK, RECIEPT_ROOT, FONT_ALEF_REGULAR
 from config.customer_defaults import (
     get_default_save_folder, set_default_save_folder,
     get_default_description, set_default_description,
+    get_excel_path, set_excel_path,
 )
 try:
     from logic.receiptGen import create_receipt
@@ -73,6 +74,8 @@ class MonthlyReceiptsApp_Qt(QWidget):
     def __init__(self):
         super().__init__()
         self.rows = []
+        saved_path = get_excel_path()
+        self.excel_path = saved_path if saved_path and os.path.exists(saved_path) else ACCOUNT_BOOK
         self.init_ui()
 
     def init_ui(self):
@@ -89,6 +92,19 @@ class MonthlyReceiptsApp_Qt(QWidget):
         self.load_btn = QPushButton('Load')
         self.load_btn.clicked.connect(self.on_load_clicked)
         header_layout.addWidget(self.load_btn)
+
+        header_layout.addWidget(QLabel('Excel:'))
+        self.excel_path_edit = QLineEdit(self.excel_path)
+        self.excel_path_edit.setReadOnly(True)
+        self.excel_path_edit.setLayoutDirection(Qt.LeftToRight)
+        self.excel_path_edit.setToolTip(self.excel_path)
+        self.excel_path_edit.setMinimumWidth(260)
+        header_layout.addWidget(self.excel_path_edit, 1)
+
+        self.browse_btn = QPushButton('Browse...')
+        self.browse_btn.setToolTip('Choose the account book Excel file')
+        self.browse_btn.clicked.connect(self.on_browse_excel)
+        header_layout.addWidget(self.browse_btn)
         header_layout.addStretch()
         main_layout.addLayout(header_layout)
 
@@ -153,6 +169,23 @@ class MonthlyReceiptsApp_Qt(QWidget):
         self.desc_edit.setLayoutDirection(Qt.RightToLeft)
         self.desc_edit.setAlignment(Qt.AlignRight)
 
+    def on_browse_excel(self):
+        start_dir = os.path.dirname(self.excel_path) if self.excel_path else ''
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            'Select Account Book Excel',
+            start_dir,
+            'Excel Files (*.xlsx *.xlsm);;All Files (*)',
+            options=QFileDialog.DontUseNativeDialog
+        )
+        if not path:
+            return
+        self.excel_path = os.path.normpath(path)
+        set_excel_path(self.excel_path)
+        self.excel_path_edit.setText(self.excel_path)
+        self.excel_path_edit.setToolTip(self.excel_path)
+        self.load_month(self.month_spin.value())
+
     def on_load_clicked(self):
         month = self.month_spin.value()
         self.load_month(month)
@@ -163,13 +196,13 @@ class MonthlyReceiptsApp_Qt(QWidget):
         self.index_spin.setRange(1, 1)
         self.desc_edit.clear()
 
-        if not os.path.exists(ACCOUNT_BOOK):
-            QMessageBox.critical(self, 'Error', f'Account book not found:\n{ACCOUNT_BOOK}')
+        if not os.path.exists(self.excel_path):
+            QMessageBox.critical(self, 'Error', f'Account book not found:\n{self.excel_path}')
             return
 
         try:
             import openpyxl
-            wb = openpyxl.load_workbook(ACCOUNT_BOOK, data_only=True)
+            wb = openpyxl.load_workbook(self.excel_path, data_only=True)
             ws = wb['Receipt Matrix'] if 'Receipt Matrix' in wb.sheetnames else wb.active
         except Exception as e:
             QMessageBox.critical(self, 'Error', f'Failed to load Excel:\n{e}')
@@ -201,11 +234,20 @@ class MonthlyReceiptsApp_Qt(QWidget):
         bank_idx = col_map['bank']
         alloc_idx = col_map['alloc']
 
+        current_month = None
         for row in ws.iter_rows(min_row=2, values_only=True):
             if not row:
                 continue
 
-            if _as_month(row[month_idx]) != month:
+            row_month = _as_month(row[month_idx])
+            if row_month is None:
+                # Extra payment rows often leave the Month cell empty,
+                # meaning "same month as the row above".
+                row_month = current_month
+            else:
+                current_month = row_month
+
+            if row_month != month:
                 continue
 
             customer_val = _as_text(row[customer_idx])
